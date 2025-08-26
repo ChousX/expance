@@ -2,13 +2,17 @@ use bevy::prelude::*;
 
 use crate::app::AppState;
 
-mod wisp;
+mod command;
 mod core;
+mod wisp;
 
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((core::PlayerCorePlugin, wisp::PlayerWispPlugin));
+        app.add_plugins((
+            core::PlayerCorePlugin,
+            wisp::PlayerWispPlugin,
+        ));
         app.add_systems(OnEnter(AppState::Game), spawn_player);
     }
 }
@@ -19,7 +23,7 @@ pub struct Player;
 #[derive(Component, Default, Deref, DerefMut)]
 pub struct PlayerId(pub u8);
 
-fn spawn_player(mut commands: Commands){
+fn spawn_player(mut commands: Commands) {
     commands.spawn(Player);
 }
 

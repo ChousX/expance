@@ -10,6 +10,9 @@ mod camera;
 mod cursor;
 mod helper;
 mod player;
+mod terrain;
+mod chunk;
+mod domain;
 
 fn main() -> AppExit {
     let mut app = App::new();
@@ -20,6 +23,8 @@ fn main() -> AppExit {
         player::PlayerPlugin,
         camera::CameraPlugin,
         helper::HelperPlugin,
+        terrain::TerrainPlugin,
+        chunk::ChunkPlugin,
     ));
     app.run()
 }

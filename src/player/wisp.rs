@@ -15,12 +15,18 @@ impl Plugin for PlayerWispPlugin {
                 .chain()
                 .in_set(AppUpdate::Data),
         );
+        app.add_observer(on_halt::<HomeToCursor>)
+            .add_observer(on_halt::<Halt>)
+            .add_observer(on_halt::<MoveEntityTo>);
     }
 }
 
 #[derive(Component, Default)]
 #[require(Transform)]
 pub struct PlayerWisp;
+
+#[derive(Component, Default)]
+pub struct HomeToCursor;
 
 fn spawn_player_wisp(
     trigger: Trigger<OnAdd, PlayerCore>,
@@ -30,14 +36,21 @@ fn spawn_player_wisp(
 ) {
     let sprite = Sprite::from_image(asset_server.load("placeholder/Diamond/Sprite-0002.png"));
     let (&transform, &OwnedBy(owner)) = transforms.get(trigger.target()).unwrap();
-    commands.spawn((PlayerWisp, sprite, transform, Speed(5000.0), OwnedBy(owner)));
+    commands.spawn((
+        PlayerWisp,
+        sprite,
+        transform,
+        Speed(5000.0),
+        OwnedBy(owner),
+        HomeToCursor,
+    ));
     info!("spawned player wisp");
 }
 
 fn add_move_to(
     mut commands: Commands,
     cursor_pos: Res<CurrsorPositon>,
-    wisp_q: Query<(&GlobalTransform, Entity), With<PlayerWisp>>,
+    wisp_q: Query<(&GlobalTransform, Entity), (With<PlayerWisp>, With<HomeToCursor>)>,
 ) {
     for (wisp_transform, entity) in wisp_q.iter() {
         let wisp_pos = wisp_transform.translation().xy();
@@ -52,12 +65,24 @@ fn add_move_to(
 }
 
 fn update_move_to(
-    mut wisp_q: Query<&mut MoveEntityTo, With<PlayerWisp>>,
+    mut wisp_q: Query<&mut MoveEntityTo, (With<PlayerWisp>, With<HomeToCursor>)>,
     cursor_pos: Res<CurrsorPositon>,
 ) {
     for mut move_to in wisp_q.iter_mut() {
         if move_to.to != **cursor_pos {
             move_to.to = **cursor_pos;
         }
+    }
+}
+
+#[derive(Component, Default)]
+pub struct Halt;
+
+fn on_halt<T>(trigger: Trigger<OnAdd, Halt>, mut commands: Commands, query: Query<&T>)
+where
+    T: Component,
+{
+    if query.get(trigger.target()).is_ok() {
+        commands.entity(trigger.target()).remove::<T>();
     }
 }

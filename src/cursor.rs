@@ -1,5 +1,6 @@
 use crate::app::AppUpdate;
 use crate::camera::MainCamera;
+use crate::chunk::{Chunk, ChunkLoader};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
@@ -7,7 +8,13 @@ pub struct CurrsorPlugin;
 impl Plugin for CurrsorPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CurrsorPositon>()
-            .add_systems(Update, update_currsor_pos.in_set(AppUpdate::PreData));
+            .add_systems(
+                Update,
+                (update_currsor_pos, update_transform_cursor_entity)
+                    .chain()
+                    .in_set(AppUpdate::PreData),
+            )
+            .add_systems(Startup, spawn_cursor_entity);
     }
 }
 
@@ -30,4 +37,32 @@ fn update_currsor_pos(
     {
         **currsor_positon = world_position;
     }
+}
+
+#[derive(Component, Default)]
+#[require(Transform)]
+pub struct CursorEntity;
+
+fn spawn_cursor_entity(mut commands: Commands) {
+    commands.spawn((
+        CursorEntity,
+        ChunkLoader {
+            full: vec2(5.0, 5.0),
+            mostly: vec2(6.0, 6.0),
+            minimum: vec2(10.0, 10.0),
+        },
+    ));
+}
+
+fn update_transform_cursor_entity(
+    pos: Res<CurrsorPositon>,
+    mut transform: Query<&mut Transform, With<CursorEntity>>,
+) {
+    if !pos.is_changed() {
+        return;
+    }
+    let Ok(mut transform) = transform.single_mut() else {
+        return;
+    };
+    transform.translation = pos.extend(transform.translation.z);
 }
