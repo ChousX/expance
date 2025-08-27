@@ -41,7 +41,7 @@ fn show_chunk_spawn(trigger: Trigger<OnAdd, Chunk>, q: Query<(&ChunkLoadLevel, &
 #[require(ChunkPos)]
 pub struct Chunk;
 impl Chunk {
-    pub const SIZE: Vec2 = vec2(250.0, 250.0);
+    pub const SIZE: Vec2 = vec2(500.0, 500.0);
     pub fn transform_to_chunk_pos(transform: &Transform) -> IVec2 {
         let pos = transform.translation.xy();
         let Vec2 { x, y } = pos / Self::SIZE;
@@ -63,13 +63,24 @@ impl ChunkPos {
 }
 
 #[derive(
-    VariantArray, Debug, PartialEq, Eq, Component, Default, Clone, Copy, IntoStaticStr, Hash,
+    PartialOrd,
+    Ord,
+    VariantArray,
+    Debug,
+    PartialEq,
+    Eq,
+    Component,
+    Default,
+    Clone,
+    Copy,
+    IntoStaticStr,
+    Hash,
 )]
 pub enum ChunkLoadLevel {
-    Full,
-    Mostly,
+    Full = 2,
+    Mostly = 1,
     #[default]
-    Minimum,
+    Minimum = 0,
 }
 
 #[derive(Resource, Default, Deref, DerefMut)]
@@ -204,6 +215,7 @@ fn load_chunks_around_chunk_loader(
     chunk_loaders: Query<(&ChunkLoader, &Transform)>,
     chunk_manager: Res<ChunkManager>,
     mut commands: Commands,
+    existing_chunks: Query<&ChunkLoadLevel>,
 ) {
     let mut seen_chunks = HashSet::new();
     for (loader, transform) in chunk_loaders.iter() {
@@ -218,7 +230,13 @@ fn load_chunks_around_chunk_loader(
                     continue;
                 }
 
-                if chunk_manager.is_loaded(chunk_pos) {
+                if let Some(existing_entity) = chunk_manager.get(chunk_pos) {
+                    // Update the load level of the existing chunk
+                    if let Ok(current_level) = existing_chunks.get(existing_entity) {
+                        if *current_level < load_level {
+                            commands.entity(existing_entity).insert(load_level);
+                        }
+                    }
                     continue;
                 }
 
@@ -248,22 +266,31 @@ fn add_chunk_transform(
     info!("new:{id}");
 }
 
-fn draw_chunk_outlines(chunks: Query<(&ChunkPos, Option<&GlobalTransform>)>, mut gizmos: Gizmos) {
-    for (chunk_pos, global_transform) in &chunks {
+fn draw_chunk_outlines(
+    chunks: Query<(&ChunkPos, Option<&GlobalTransform>, &ChunkLoadLevel)>,
+    mut gizmos: Gizmos,
+) {
+    for (chunk_pos, global_transform, load_level) in &chunks {
         let base_pos = chunk_pos.into_vec3();
         let world_pos = global_transform.map_or(base_pos, |g| g.translation());
 
         let size = Chunk::SIZE;
+        let z = world_pos.z;
 
-        // No need for half-size offset — chunks are aligned to bottom-left
         let bottom_left = world_pos;
         let bottom_right = bottom_left + Vec3::new(size.x, 0.0, 0.0);
         let top_right = bottom_right + Vec3::new(0.0, size.y, 0.0);
         let top_left = bottom_left + Vec3::new(0.0, size.y, 0.0);
 
-        gizmos.line(top_left, top_right, Color::WHITE);
-        gizmos.line(top_right, bottom_right, Color::WHITE);
-        gizmos.line(bottom_right, bottom_left, Color::WHITE);
-        gizmos.line(bottom_left, top_left, Color::WHITE);
+        let color = match load_level {
+            ChunkLoadLevel::Full => bevy::color::palettes::tailwind::GREEN_500,
+            ChunkLoadLevel::Mostly => bevy::color::palettes::tailwind::YELLOW_500,
+            ChunkLoadLevel::Minimum => bevy::color::palettes::tailwind::RED_500,
+        };
+
+        gizmos.line(top_left, top_right, color);
+        gizmos.line(top_right, bottom_right, color);
+        gizmos.line(bottom_right, bottom_left, color);
+        gizmos.line(bottom_left, top_left, color);
     }
 }

@@ -47,9 +47,9 @@ fn spawn_cursor_entity(mut commands: Commands) {
     commands.spawn((
         CursorEntity,
         ChunkLoader {
-            full: vec2(5.0, 5.0),
-            mostly: vec2(6.0, 6.0),
-            minimum: vec2(10.0, 10.0),
+            full: vec2(100.0, 100.0),
+            mostly: vec2(500.0, 500.0),
+            minimum: vec2(1000.0, 1000.0),
         },
     ));
 }
