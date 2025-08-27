@@ -27,7 +27,7 @@ impl Plugin for ChunkPlugin {
 }
 
 #[cfg(feature = "chunk_info")]
-fn show_chunk_spawn(trigger: Trigger<OnAdd, Chunk>, q: Query<(&ChunkLoadLevel, &ChunkPos)>) {
+fn show_chunk_spawn(trigger: Trigger<OnAdd, Chunk>, q: Query<(&LoadLevel, &ChunkPos)>) {
     let id = trigger.target();
     let Ok((load_level, pos)) = q.get(id) else {
         warn!("info was not there");
@@ -76,7 +76,7 @@ impl ChunkPos {
     IntoStaticStr,
     Hash,
 )]
-pub enum ChunkLoadLevel {
+pub enum LoadLevel {
     Full = 2,
     Mostly = 1,
     #[default]
@@ -178,11 +178,11 @@ pub struct ChunkLoader {
 }
 
 impl ChunkLoader {
-    pub fn chunk_pos_in_range(&self, pos: Vec2, load_level: ChunkLoadLevel) -> PointsInRange {
+    pub fn chunk_pos_in_range(&self, pos: Vec2, load_level: LoadLevel) -> PointsInRange {
         let (target, min) = match load_level {
-            ChunkLoadLevel::Full => (self.full, vec2(0.0, 0.0)),
-            ChunkLoadLevel::Mostly => (self.mostly, self.full),
-            ChunkLoadLevel::Minimum => (self.minimum, self.mostly),
+            LoadLevel::Full => (self.full, vec2(0.0, 0.0)),
+            LoadLevel::Mostly => (self.mostly, self.full),
+            LoadLevel::Minimum => (self.minimum, self.mostly),
         };
         let min_pos = pos - target;
         let max_pos = pos + target;
@@ -215,13 +215,13 @@ fn load_chunks_around_chunk_loader(
     chunk_loaders: Query<(&ChunkLoader, &Transform)>,
     chunk_manager: Res<ChunkManager>,
     mut commands: Commands,
-    existing_chunks: Query<&ChunkLoadLevel>,
+    existing_chunks: Query<&LoadLevel>,
 ) {
     let mut seen_chunks = HashSet::new();
     for (loader, transform) in chunk_loaders.iter() {
         let base_z = transform.translation.z as i32;
 
-        for &load_level in ChunkLoadLevel::VARIANTS {
+        for &load_level in LoadLevel::VARIANTS {
             for point in loader.chunk_pos_in_range(transform.translation.xy(), load_level) {
                 let chunk_pos = point.extend(base_z);
 
@@ -267,7 +267,7 @@ fn add_chunk_transform(
 }
 
 fn draw_chunk_outlines(
-    chunks: Query<(&ChunkPos, Option<&GlobalTransform>, &ChunkLoadLevel)>,
+    chunks: Query<(&ChunkPos, Option<&GlobalTransform>, &LoadLevel)>,
     mut gizmos: Gizmos,
 ) {
     for (chunk_pos, global_transform, load_level) in &chunks {
@@ -281,9 +281,9 @@ fn draw_chunk_outlines(
         let top_left = bottom_left + Vec3::new(0.0, SIZE.y, 0.0);
 
         let color = match load_level {
-            ChunkLoadLevel::Full => bevy::color::palettes::tailwind::GREEN_500,
-            ChunkLoadLevel::Mostly => bevy::color::palettes::tailwind::YELLOW_500,
-            ChunkLoadLevel::Minimum => bevy::color::palettes::tailwind::RED_500,
+            LoadLevel::Full => bevy::color::palettes::tailwind::GREEN_500,
+            LoadLevel::Mostly => bevy::color::palettes::tailwind::YELLOW_500,
+            LoadLevel::Minimum => bevy::color::palettes::tailwind::RED_500,
         };
 
         gizmos.line(top_left, top_right, color);

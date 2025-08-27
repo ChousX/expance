@@ -17,9 +17,9 @@ fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         MainCamera,
         ChunkLoader {
-            full: vec2(100.0, 100.0),
-            mostly: vec2(500.0, 500.0),
-            minimum: vec2(1000.0, 1000.0),
+            full: vec2(700.0, 500.0),
+            mostly: vec2(900.0, 800.0),
+            minimum: vec2(1200.0, 1000.0),
         },
     ));
 }

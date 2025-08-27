@@ -622,6 +622,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_ecs_tilemap"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec11e943225eb172928a85f2183b665f7782743b00bca937fbab3736921a1666"
+dependencies = [
+ "bevy",
+ "log",
+]
+
+[[package]]
 name = "bevy_encase_derive"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2037,6 +2047,7 @@ name = "expance"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_ecs_tilemap",
  "log",
  "strum 0.27.2",
  "tracing",
