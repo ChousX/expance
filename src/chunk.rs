@@ -274,13 +274,11 @@ fn draw_chunk_outlines(
         let base_pos = chunk_pos.into_vec3();
         let world_pos = global_transform.map_or(base_pos, |g| g.translation());
 
-        let size = Chunk::SIZE;
-        let z = world_pos.z;
-
+        const SIZE: Vec2 = Chunk::SIZE;
         let bottom_left = world_pos;
-        let bottom_right = bottom_left + Vec3::new(size.x, 0.0, 0.0);
-        let top_right = bottom_right + Vec3::new(0.0, size.y, 0.0);
-        let top_left = bottom_left + Vec3::new(0.0, size.y, 0.0);
+        let bottom_right = bottom_left + Vec3::new(SIZE.x, 0.0, 0.0);
+        let top_right = bottom_right + Vec3::new(0.0, SIZE.y, 0.0);
+        let top_left = bottom_left + Vec3::new(0.0, SIZE.y, 0.0);
 
         let color = match load_level {
             ChunkLoadLevel::Full => bevy::color::palettes::tailwind::GREEN_500,

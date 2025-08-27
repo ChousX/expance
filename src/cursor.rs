@@ -44,14 +44,7 @@ fn update_currsor_pos(
 pub struct CursorEntity;
 
 fn spawn_cursor_entity(mut commands: Commands) {
-    commands.spawn((
-        CursorEntity,
-        ChunkLoader {
-            full: vec2(100.0, 100.0),
-            mostly: vec2(500.0, 500.0),
-            minimum: vec2(1000.0, 1000.0),
-        },
-    ));
+    commands.spawn((CursorEntity,));
 }
 
 fn update_transform_cursor_entity(
