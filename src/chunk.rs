@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use bevy::{
     ecs::query::{QueryData, QueryFilter},
@@ -20,7 +21,8 @@ impl Plugin for ChunkPlugin {
             )
             .add_observer(add_chunk_transform);
         #[cfg(feature = "chunk_info")]
-        app.add_observer(show_chunk_spawn);
+        app.add_observer(show_chunk_spawn)
+            .add_systems(Update, draw_chunk_outlines);
     }
 }
 
@@ -31,7 +33,7 @@ fn show_chunk_spawn(trigger: Trigger<OnAdd, Chunk>, q: Query<(&ChunkLoadLevel, &
         warn!("info was not there");
         return;
     };
-    let str_ll : &str = load_level.into();
+    let str_ll: &str = load_level.into();
     info!("Chunk(id:{},load_level:{},pos:{})", id, str_ll, pos.0);
 }
 
@@ -39,7 +41,7 @@ fn show_chunk_spawn(trigger: Trigger<OnAdd, Chunk>, q: Query<(&ChunkLoadLevel, &
 #[require(ChunkPos)]
 pub struct Chunk;
 impl Chunk {
-    pub const SIZE: Vec2 = vec2(10.0, 10.0);
+    pub const SIZE: Vec2 = vec2(250.0, 250.0);
     pub fn transform_to_chunk_pos(transform: &Transform) -> IVec2 {
         let pos = transform.translation.xy();
         let Vec2 { x, y } = pos / Self::SIZE;
@@ -60,7 +62,9 @@ impl ChunkPos {
     }
 }
 
-#[derive(VariantArray, Debug, PartialEq, Eq, Component, Default, Clone, Copy, IntoStaticStr)]
+#[derive(
+    VariantArray, Debug, PartialEq, Eq, Component, Default, Clone, Copy, IntoStaticStr, Hash,
+)]
 pub enum ChunkLoadLevel {
     Full,
     Mostly,
@@ -69,41 +73,29 @@ pub enum ChunkLoadLevel {
 }
 
 #[derive(Resource, Default, Deref, DerefMut)]
-pub struct ChunkManager(pub Vec<HashMap<IVec2, Entity>>);
+pub struct ChunkManager(pub HashMap<i32, HashMap<IVec2, Entity>>);
 
 impl ChunkManager {
     pub fn get(&self, pos: IVec3) -> Option<Entity> {
         let IVec3 { x, y, z } = pos;
-        let level = self.get_level(z as usize)?;
-        level.get(&ivec2(x, y)).copied()
+        self.0.get(&z)?.get(&ivec2(x, y)).copied()
     }
 
     pub fn insert(&mut self, pos: IVec3, id: Entity) -> Option<Entity> {
         let IVec3 { x, y, z } = pos;
-        let level = self.get_level_mut(z as usize)?;
-        level.insert(ivec2(x, y), id)
+        self.0.entry(z).or_default().insert(ivec2(x, y), id)
     }
 
     pub fn remove(&mut self, pos: IVec3) -> Option<Entity> {
         let IVec3 { x, y, z } = pos;
-        let level = self.get_level_mut(z as usize)?;
-        level.remove(&ivec2(x, y))
+        self.0.get_mut(&z)?.remove(&ivec2(x, y))
     }
 
     pub fn is_loaded(&self, pos: IVec3) -> bool {
         let IVec3 { x, y, z } = pos;
-        let Some(level) = self.get_level(z as usize) else {
-            return false;
-        };
-        level.contains_key(&ivec2(x, y))
-    }
-
-    pub fn get_level(&self, level: usize) -> Option<&HashMap<IVec2, Entity>> {
-        self.0.get(level)
-    }
-
-    fn get_level_mut(&mut self, level: usize) -> Option<&mut HashMap<IVec2, Entity>> {
-        self.0.get_mut(level)
+        self.0
+            .get(&z)
+            .map_or(false, |level| level.contains_key(&ivec2(x, y)))
     }
 }
 
@@ -181,15 +173,16 @@ impl ChunkLoader {
             ChunkLoadLevel::Mostly => (self.mostly, self.full),
             ChunkLoadLevel::Minimum => (self.minimum, self.mostly),
         };
-        let start_count = ((min + min) / Chunk::SIZE).as_ivec2();
-        let stop_count = ((target + target) / Chunk::SIZE).as_ivec2();
-        let chunk_num = stop_count - start_count;
-        let chunk_pos = (pos / Chunk::SIZE).as_ivec2();
+        let min_pos = pos - target;
+        let max_pos = pos + target;
 
-        let mut points = Vec::with_capacity(chunk_num.x as usize * chunk_num.y as usize);
-        for y in start_count.y..stop_count.y {
-            for x in start_count.x..stop_count.x {
-                points.push(ivec2(x, y) + chunk_pos);
+        let min_chunk = (min_pos / Chunk::SIZE).floor().as_ivec2();
+        let max_chunk = (max_pos / Chunk::SIZE).ceil().as_ivec2();
+
+        let mut points = Vec::new();
+        for y in min_chunk.y..max_chunk.y {
+            for x in min_chunk.x..max_chunk.x {
+                points.push(ivec2(x, y));
             }
         }
         PointsInRange(points)
@@ -212,13 +205,29 @@ fn load_chunks_around_chunk_loader(
     chunk_manager: Res<ChunkManager>,
     mut commands: Commands,
 ) {
+    let mut seen_chunks = HashSet::new();
     for (loader, transform) in chunk_loaders.iter() {
-        for load_level in ChunkLoadLevel::VARIANTS {
-            for point in loader.chunk_pos_in_range(transform.translation.xy(), *load_level) {
-                let chunk_pos = point.extend(transform.translation.z as i32);
-                if !chunk_manager.is_loaded(chunk_pos) {
-                    commands.spawn((Chunk, ChunkPos(chunk_pos), *load_level));
+        let base_z = transform.translation.z as i32;
+
+        for &load_level in ChunkLoadLevel::VARIANTS {
+            for point in loader.chunk_pos_in_range(transform.translation.xy(), load_level) {
+                let chunk_pos = point.extend(base_z);
+
+                // Only spawn once per position
+                if !seen_chunks.insert(chunk_pos) {
+                    continue;
                 }
+
+                if chunk_manager.is_loaded(chunk_pos) {
+                    continue;
+                }
+
+                let id = commands
+                    .spawn((Chunk, ChunkPos(chunk_pos), load_level))
+                    .id();
+
+                #[cfg(feature = "chunk_info")]
+                info!("new:{id:?}");
             }
         }
     }
@@ -236,4 +245,25 @@ fn add_chunk_transform(
     commands
         .entity(id)
         .insert(Transform::from_translation(chunk_pos.into_vec3()));
+    info!("new:{id}");
+}
+
+fn draw_chunk_outlines(chunks: Query<(&ChunkPos, Option<&GlobalTransform>)>, mut gizmos: Gizmos) {
+    for (chunk_pos, global_transform) in &chunks {
+        let base_pos = chunk_pos.into_vec3();
+        let world_pos = global_transform.map_or(base_pos, |g| g.translation());
+
+        let size = Chunk::SIZE;
+
+        // No need for half-size offset — chunks are aligned to bottom-left
+        let bottom_left = world_pos;
+        let bottom_right = bottom_left + Vec3::new(size.x, 0.0, 0.0);
+        let top_right = bottom_right + Vec3::new(0.0, size.y, 0.0);
+        let top_left = bottom_left + Vec3::new(0.0, size.y, 0.0);
+
+        gizmos.line(top_left, top_right, Color::WHITE);
+        gizmos.line(top_right, bottom_right, Color::WHITE);
+        gizmos.line(bottom_right, bottom_left, Color::WHITE);
+        gizmos.line(bottom_left, top_left, Color::WHITE);
+    }
 }
