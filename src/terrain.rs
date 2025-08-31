@@ -43,7 +43,7 @@ fn spawn_chunk(
         grid_size: tile_size.into(),
         size: TILES_PRE_CHUNK.into(),
         storage: tile_storage,
-        texture: TilemapTexture::Single(texture_handle),
+        //texture: TilemapTexture::Single(texture_handle),
         tile_size: tile_size.into(),
         render_settings: TilemapRenderSettings {
             render_chunk_size: TILES_PRE_CHUNK,
