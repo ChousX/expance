@@ -1,22 +1,59 @@
 use bevy::prelude::*;
+use bevy_asset_loader::asset_collection::AssetCollection;
 use bevy_ecs_tilemap::{
     TilemapBundle,
     map::{TilemapId, TilemapRenderSettings, TilemapTexture},
     tiles::{TileBundle, TilePos, TileStorage},
 };
 
-use crate::chunk::Chunk;
+use crate::{app::AppLoadingState, chunk::Chunk, helper::create_texture_atlas};
 
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
-    fn build(&self, app: &mut App) {}
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            OnExit(AppLoadingState::Loaded),
+            transform_raw_tile_textures_to_atlas,
+        );
+    }
 }
 
 pub const TILES_PRE_CHUNK: UVec2 = uvec2(10, 10);
 
+#[derive(AssetCollection, Resource)]
+pub struct RawTileTextures {
+    #[asset(path = "tile_map_atalas", collection(typed))]
+    tiles: Vec<Handle<Image>>,
+}
+
 #[derive(Resource)]
 pub struct TerrainTileAtlas {
-    texture: Handle<Image>,
+    pub texture: Handle<Image>,
+    pub layout: Handle<TextureAtlasLayout>,
+}
+
+///Builds TerrainTileAtlas from loaded RawTileTextures and removes RawTileTextures when done
+fn transform_raw_tile_textures_to_atlas(
+    mut commands: Commands,
+    raw_tile_textures: Res<RawTileTextures>,
+    mut images: ResMut<Assets<Image>>,
+    mut layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    let mut texture_atlas_builder = TextureAtlasBuilder::default();
+    for handle in raw_tile_textures.tiles.iter() {
+        let Some(texture) = images.get(handle) else {
+            continue;
+        };
+        texture_atlas_builder.add_texture(Some(handle.id()), texture);
+    }
+
+    let (texture_atlas_layout, _texture_atlas_sources, texture) =
+        texture_atlas_builder.build().unwrap();
+    let texture = images.add(texture);
+    let layout = layouts.add(texture_atlas_layout);
+    let terrain_tile_atlas = TerrainTileAtlas { texture, layout };
+    commands.insert_resource(terrain_tile_atlas);
+    commands.remove_resource::<RawTileTextures>();
 }
 
 fn spawn_chunk(
