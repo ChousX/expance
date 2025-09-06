@@ -14,6 +14,11 @@ impl Plugin for TerrainPlugin {
 
 pub const TILES_PRE_CHUNK: UVec2 = uvec2(10, 10);
 
+#[derive(Resource)]
+pub struct TerrainTileAtlas{
+    texture: Handle<Image>,
+};
+
 fn spawn_chunk(
     trigger: Trigger<OnAdd, Chunk>,
     commands: &mut Commands,
