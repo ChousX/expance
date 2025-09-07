@@ -22,8 +22,7 @@ impl Plugin for AppPlugin {
             LoadingState::new(AppLoadingState::Loading)
                 .continue_to_state(AppLoadingState::Loaded)
                 .load_collection::<crate::terrain::RawTileTextures>(),
-        )
-        .run();
+        );
     }
 }
 

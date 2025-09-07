@@ -23,7 +23,7 @@ fn main() -> AppExit {
         player::PlayerPlugin,
         camera::CameraPlugin,
         helper::HelperPlugin,
-        terrain::TerrainPlugin,
+        //terrain::TerrainPlugin,
         chunk::ChunkPlugin,
     ));
     app.run()
