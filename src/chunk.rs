@@ -7,6 +7,7 @@ use bevy::{
 };
 use strum::{IntoStaticStr, VariantArray};
 
+use crate::app::AppState;
 use crate::app::AppUpdate;
 
 pub struct ChunkPlugin;
@@ -19,7 +20,8 @@ impl Plugin for ChunkPlugin {
                 Update,
                 load_chunks_around_chunk_loader.in_set(AppUpdate::PostAction),
             )
-            .add_observer(add_chunk_transform).add_systems(OnExit(AppState::Game), remove_chunk_loaders);
+            .add_observer(add_chunk_transform)
+            .add_systems(OnExit(AppState::Game), remove_chunk_loaders);
         #[cfg(feature = "chunk_info")]
         app.add_observer(show_chunk_spawn)
             .add_systems(Update, draw_chunk_outlines);
