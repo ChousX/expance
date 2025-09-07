@@ -19,7 +19,7 @@ impl Plugin for ChunkPlugin {
                 Update,
                 load_chunks_around_chunk_loader.in_set(AppUpdate::PostAction),
             )
-            .add_observer(add_chunk_transform);
+            .add_observer(add_chunk_transform).add_systems(OnExit(AppState::Game), remove_chunk_loaders);
         #[cfg(feature = "chunk_info")]
         app.add_observer(show_chunk_spawn)
             .add_systems(Update, draw_chunk_outlines);
@@ -290,5 +290,11 @@ fn draw_chunk_outlines(
         gizmos.line(top_right, bottom_right, color);
         gizmos.line(bottom_right, bottom_left, color);
         gizmos.line(bottom_left, top_left, color);
+    }
+}
+
+fn remove_chunk_loaders(mut commands: Commands, chunk_loaders: Query<Entity, With<ChunkLoader>>) {
+    for chunk_loader in chunk_loaders.iter() {
+        commands.entity(chunk_loader).remove::<ChunkLoader>();
     }
 }
