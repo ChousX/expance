@@ -23,6 +23,12 @@ impl Plugin for AppPlugin {
                 .continue_to_state(AppLoadingState::Loaded)
                 .load_collection::<crate::terrain::RawTileTextures>(),
         );
+
+        app.add_systems(OnEnter(AppState::First), move_to_spash)
+            .add_systems(
+                Update,
+                move_to_menu.run_if(in_state(AppLoadingState::Loaded)),
+            );
     }
 }
 
@@ -50,4 +56,12 @@ pub enum AppUpdate {
     Data,
     Action,
     PostAction,
+}
+
+fn move_to_spash(mut next: ResMut<NextState<AppState>>) {
+    next.set(AppState::Splash);
+}
+
+fn move_to_menu(mut next: ResMut<NextState<AppState>>) {
+    next.set(AppState::Game);
 }
