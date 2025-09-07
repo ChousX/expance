@@ -15,6 +15,7 @@ impl Plugin for TerrainPlugin {
             OnEnter(AppLoadingState::Loaded),
             transform_raw_tile_textures_to_atlas,
         );
+        app.add_observer(add_terrain_to_chunk);
     }
 }
 
@@ -56,11 +57,10 @@ fn transform_raw_tile_textures_to_atlas(
     commands.remove_resource::<RawTileTextures>();
 }
 
-fn spawn_chunk(
+fn add_terrain_to_chunk(
     trigger: Trigger<OnAdd, Chunk>,
-    commands: &mut Commands,
+    mut commands: Commands,
     tile_map_atalas: Res<TerrainTileAtlas>,
-    asset_server: &AssetServer,
 ) {
     let tile_size = Chunk::SIZE / TILES_PRE_CHUNK.as_vec2();
     let tilemap_entity = trigger.target();
