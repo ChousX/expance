@@ -55,6 +55,7 @@ fn transform_raw_tile_textures_to_atlas(
     let terrain_tile_atlas = TerrainTileAtlas { texture, layout };
     commands.insert_resource(terrain_tile_atlas);
     commands.remove_resource::<RawTileTextures>();
+    info!("terrain atlas built");
 }
 
 fn add_terrain_to_chunk(
@@ -62,6 +63,7 @@ fn add_terrain_to_chunk(
     mut commands: Commands,
     tile_map_atalas: Res<TerrainTileAtlas>,
 ) {
+    info!("Spawn Terrain");
     let tile_size = Chunk::SIZE / TILES_PRE_CHUNK.as_vec2();
     let tilemap_entity = trigger.target();
     let mut tile_storage = TileStorage::empty(TILES_PRE_CHUNK.into());
