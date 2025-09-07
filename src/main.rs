@@ -7,12 +7,13 @@ use bevy::prelude::*;
 
 mod app;
 mod camera;
+mod chunk;
 mod cursor;
+mod domain;
+mod game;
 mod helper;
 mod player;
 mod terrain;
-mod chunk;
-mod domain;
 
 fn main() -> AppExit {
     let mut app = App::new();
@@ -23,8 +24,9 @@ fn main() -> AppExit {
         player::PlayerPlugin,
         camera::CameraPlugin,
         helper::HelperPlugin,
-        //terrain::TerrainPlugin,
+        terrain::TerrainPlugin,
         chunk::ChunkPlugin,
+        game::GamePlugin,
     ));
     app.run()
 }

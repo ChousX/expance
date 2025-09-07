@@ -5,7 +5,6 @@ pub struct AppPlugin;
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<AppState>()
-            .init_state::<PlayState>()
             .add_sub_state::<AppLoadingState>();
 
         app.configure_sets(
@@ -51,11 +50,4 @@ pub enum AppUpdate {
     Data,
     Action,
     PostAction,
-}
-
-#[derive(States, Default, Clone, Eq, PartialEq, Debug, Hash)]
-pub enum PlayState {
-    Paused,
-    #[default]
-    Playing,
 }

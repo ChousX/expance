@@ -6,7 +6,7 @@ use bevy_ecs_tilemap::{
     tiles::{TileBundle, TilePos, TileStorage},
 };
 
-use crate::{app::AppLoadingState, chunk::Chunk, helper::create_texture_atlas};
+use crate::{app::AppLoadingState, chunk::Chunk};
 
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
@@ -32,7 +32,7 @@ pub struct TerrainTileAtlas {
     pub layout: Handle<TextureAtlasLayout>,
 }
 
-///Builds TerrainTileAtlas from loaded RawTileTextures and removes RawTileTextures when done
+///Builds TerrainTileAtuas from loaded RawTileTextures and removes RawTileTextures when done
 fn transform_raw_tile_textures_to_atlas(
     mut commands: Commands,
     raw_tile_textures: Res<RawTileTextures>,
@@ -59,6 +59,7 @@ fn transform_raw_tile_textures_to_atlas(
 fn spawn_chunk(
     trigger: Trigger<OnAdd, Chunk>,
     commands: &mut Commands,
+    tile_map_atalas: Res<TerrainTileAtlas>,
     asset_server: &AssetServer,
 ) {
     let tile_size = Chunk::SIZE / TILES_PRE_CHUNK.as_vec2();
@@ -85,7 +86,7 @@ fn spawn_chunk(
         grid_size: tile_size.into(),
         size: TILES_PRE_CHUNK.into(),
         storage: tile_storage,
-        //texture: TilemapTexture::Single(texture_handle),
+        texture: TilemapTexture::Single(terrain_tile_atlas.texture.clone()),
         tile_size: tile_size.into(),
         render_settings: TilemapRenderSettings {
             render_chunk_size: TILES_PRE_CHUNK,

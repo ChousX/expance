@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::{app::AppState, chunk::{Chunk, ChunkLoader}};
+use crate::{
+    app::AppState,
+    chunk::{Chunk, ChunkLoader},
+};
 
 pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
