@@ -1,6 +1,6 @@
 use crate::app::AppUpdate;
 use crate::cursor::CurrsorPositon;
-use crate::helper::move_entity_to::{MoveEntityTo, Speed};
+use crate::helper::move_entity_to::{Halt, MoveEntityTo, Speed, on_halt};
 use crate::player::OwnedBy;
 use crate::player::core::PlayerCore;
 use bevy::prelude::*;
@@ -78,17 +78,5 @@ fn update_move_to(
         if move_to.to != **cursor_pos {
             move_to.to = **cursor_pos;
         }
-    }
-}
-
-#[derive(Component, Default)]
-pub struct Halt;
-
-fn on_halt<T>(trigger: Trigger<OnAdd, Halt>, mut commands: Commands, query: Query<&T>)
-where
-    T: Component,
-{
-    if query.get(trigger.target()).is_ok() {
-        commands.entity(trigger.target()).remove::<T>();
     }
 }

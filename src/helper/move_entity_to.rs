@@ -84,3 +84,15 @@ fn move_entity(
         }
     }
 }
+
+#[derive(Component, Default)]
+pub struct Halt;
+
+pub fn on_halt<T>(trigger: Trigger<OnAdd, Halt>, mut commands: Commands, query: Query<&T>)
+where
+    T: Component,
+{
+    if query.get(trigger.target()).is_ok() {
+        commands.entity(trigger.target()).remove::<T>();
+    }
+}

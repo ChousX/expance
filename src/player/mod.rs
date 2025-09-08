@@ -4,12 +4,17 @@ use crate::app::AppState;
 
 mod command;
 pub mod core;
+mod view;
 pub mod wisp;
 
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((core::PlayerCorePlugin, wisp::PlayerWispPlugin));
+        app.add_plugins((
+            core::PlayerCorePlugin,
+            wisp::PlayerWispPlugin,
+            view::PlayerViewPlugin,
+        ));
         app.add_systems(OnEnter(AppState::Game), spawn_player);
     }
 }
