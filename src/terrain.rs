@@ -40,7 +40,7 @@ fn add_terrain_to_chunk(
                 .spawn(TileBundle {
                     position: tile_pos,
                     tilemap_id: TilemapId(tilemap_entity),
-                    texture_index: TileTextureIndex((x + y) % 3),
+                    texture_index: TileTextureIndex((x + y) % 4),
                     ..Default::default()
                 })
                 .id();
