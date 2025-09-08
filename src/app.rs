@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
+use bevy_ecs_tilemap::TilemapPlugin;
 
 pub struct AppPlugin;
 impl Plugin for AppPlugin {
@@ -18,10 +19,11 @@ impl Plugin for AppPlugin {
                 .chain(),
         );
 
-        app.add_loading_state(
+        app.add_plugins(TilemapPlugin).add_loading_state(
             LoadingState::new(AppLoadingState::Loading)
                 .continue_to_state(AppLoadingState::Loaded)
-                .load_collection::<crate::terrain::TerrainTileAtlas>(),
+                .load_collection::<crate::terrain::TerrainTileAtlas>()
+                .load_collection::<crate::player::wisp::PlayerWispSprite>(),
         );
 
         app.add_systems(OnEnter(AppState::First), move_to_spash)

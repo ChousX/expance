@@ -4,6 +4,7 @@ use crate::helper::move_entity_to::{MoveEntityTo, Speed};
 use crate::player::OwnedBy;
 use crate::player::core::PlayerCore;
 use bevy::prelude::*;
+use bevy_asset_loader::asset_collection::AssetCollection;
 
 pub struct PlayerWispPlugin;
 impl Plugin for PlayerWispPlugin {
@@ -25,6 +26,12 @@ impl Plugin for PlayerWispPlugin {
 #[require(Transform)]
 pub struct PlayerWisp;
 
+#[derive(AssetCollection, Resource)]
+pub struct PlayerWispSprite {
+    #[asset(path = "placeholder/Diamond/Sprite-0002.png")]
+    pub default: Handle<Image>,
+}
+
 #[derive(Component, Default)]
 pub struct HomeToCursor;
 
@@ -32,13 +39,12 @@ fn spawn_player_wisp(
     trigger: Trigger<OnAdd, PlayerCore>,
     mut commands: Commands,
     transforms: Query<(&Transform, &OwnedBy)>,
-    asset_server: Res<AssetServer>,
+    sprite_texture: Res<PlayerWispSprite>,
 ) {
-    let sprite = Sprite::from_image(asset_server.load("placeholder/Diamond/Sprite-0002.png"));
     let (&transform, &OwnedBy(owner)) = transforms.get(trigger.target()).unwrap();
     commands.spawn((
         PlayerWisp,
-        sprite,
+        Sprite::from_image(sprite_texture.default.clone()),
         transform,
         Speed(5000.0),
         OwnedBy(owner),

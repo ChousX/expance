@@ -51,11 +51,12 @@ fn add_terrain_to_chunk(
 
     commands.entity(tilemap_entity).insert(TilemapBundle {
         grid_size: tile_size.into(),
-        map_type: TilemapType::default(),
+        map_type: TilemapType::Square,
         size: TILES_PRE_CHUNK.into(),
         storage: tile_storage,
         texture: TilemapTexture::Single(tile_map_atalas.texture.clone()),
         tile_size: tile_size.into(),
+        transform: Transform::from_xyz(0.0, 0.0, 0.0),
         render_settings: TilemapRenderSettings {
             render_chunk_size: TILES_PRE_CHUNK,
             ..Default::default()
