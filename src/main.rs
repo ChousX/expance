@@ -12,6 +12,7 @@ mod cursor;
 mod domain;
 mod game;
 mod helper;
+mod input;
 mod player;
 mod terrain;
 
@@ -27,6 +28,7 @@ fn main() -> AppExit {
         terrain::TerrainPlugin,
         chunk::ChunkPlugin,
         game::GamePlugin,
+        input::InputPlugin,
     ));
     app.run()
 }

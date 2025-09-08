@@ -57,7 +57,10 @@ fn move_player_view_to(
         return;
     };
     let target = trigger.target();
-    let from = transforms.get(target).unwrap().translation().xy();
+    let Ok(transform) = transforms.get(target) else {
+        return;
+    };
+    let from  = transform.translation().xy();
     commands.entity(target).insert((MoveEntityTo {
         to,
         from,
