@@ -1,20 +1,14 @@
 use bevy::prelude::*;
 use bevy_asset_loader::asset_collection::AssetCollection;
 use bevy_ecs_tilemap::{
-    TilemapBundle,
-    map::{TilemapId, TilemapRenderSettings, TilemapTexture},
-    tiles::{TileBundle, TilePos, TileStorage},
+    map::{TilemapId, TilemapRenderSettings, TilemapTexture, TilemapType}, tiles::{TileBundle, TilePos, TileStorage, TileTextureIndex}, TilemapBundle
 };
 
-use crate::{app::AppLoadingState, chunk::Chunk};
+use crate::chunk::Chunk;
 
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            OnEnter(AppLoadingState::Loaded),
-            transform_raw_tile_textures_to_atlas,
-        );
         app.add_observer(add_terrain_to_chunk);
     }
 }
@@ -22,40 +16,20 @@ impl Plugin for TerrainPlugin {
 pub const TILES_PRE_CHUNK: UVec2 = uvec2(10, 10);
 
 #[derive(AssetCollection, Resource)]
-pub struct RawTileTextures {
-    #[asset(path = "tile_map_atalas", collection(typed))]
-    tiles: Vec<Handle<Image>>,
-}
-
-#[derive(Resource)]
 pub struct TerrainTileAtlas {
+    #[asset(path = "tile_map.png")]
     pub texture: Handle<Image>,
-    pub layout: Handle<TextureAtlasLayout>,
-}
-
-///Builds TerrainTileAtuas from loaded RawTileTextures and removes RawTileTextures when done
-fn transform_raw_tile_textures_to_atlas(
-    mut commands: Commands,
-    raw_tile_textures: Res<RawTileTextures>,
-    mut images: ResMut<Assets<Image>>,
-    mut layouts: ResMut<Assets<TextureAtlasLayout>>,
-) {
-    let mut texture_atlas_builder = TextureAtlasBuilder::default();
-    for handle in raw_tile_textures.tiles.iter() {
-        let Some(texture) = images.get(handle) else {
-            continue;
-        };
-        texture_atlas_builder.add_texture(Some(handle.id()), texture);
-    }
-
-    let (texture_atlas_layout, _texture_atlas_sources, texture) =
-        texture_atlas_builder.build().unwrap();
-    let texture = images.add(texture);
-    let layout = layouts.add(texture_atlas_layout);
-    let terrain_tile_atlas = TerrainTileAtlas { texture, layout };
-    commands.insert_resource(terrain_tile_atlas);
-    commands.remove_resource::<RawTileTextures>();
-    info!("terrain atlas built");
+    #[asset(texture_atlas_layout(
+        tile_size_x = 50,
+        tile_size_y = 50,
+        columns = 2,
+        rows = 1,
+        padding_x = 0,
+        padding_y = 0,
+        offset_x = 0,
+        offset_y = 0
+    ))]
+    pub _layout: Handle<TextureAtlasLayout>,
 }
 
 fn add_terrain_to_chunk(
@@ -75,6 +49,7 @@ fn add_terrain_to_chunk(
                 .spawn(TileBundle {
                     position: tile_pos,
                     tilemap_id: TilemapId(tilemap_entity),
+                    texture_index: TileTextureIndex(0),
                     ..Default::default()
                 })
                 .id();
@@ -83,17 +58,13 @@ fn add_terrain_to_chunk(
         }
     }
 
-    //todo add texture
     commands.entity(tilemap_entity).insert(TilemapBundle {
         grid_size: tile_size.into(),
+        map_type: TilemapType::default(),
         size: TILES_PRE_CHUNK.into(),
         storage: tile_storage,
         texture: TilemapTexture::Single(tile_map_atalas.texture.clone()),
         tile_size: tile_size.into(),
-        render_settings: TilemapRenderSettings {
-            render_chunk_size: TILES_PRE_CHUNK,
-            ..Default::default()
-        },
         ..Default::default()
     });
 }
