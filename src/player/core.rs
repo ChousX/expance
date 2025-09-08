@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_asset_loader::asset_collection::AssetCollection;
 
 use crate::player::{OwnedBy, Player};
 
@@ -12,14 +13,18 @@ impl Plugin for PlayerCorePlugin {
 #[derive(Component, Default)]
 pub struct PlayerCore;
 
+#[derive(AssetCollection, Resource)]
+pub struct PlayerCoreSprite {
+    #[asset(path = "placeholder/Diamond/Sprite-0001.png")]
+    pub default: Handle<Image>,
+}
 fn spawn_player_core(
     trigger: Trigger<OnAdd, Player>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    sprite_texture: Res<PlayerCoreSprite>,
 ) {
     info!("spawn player core");
-    let sprite = Sprite::from_image(asset_server.load("placeholder/Diamond/Sprite-0001.png"));
-    //  find good spot to place
-    let transform = Transform::default();
+    let sprite = Sprite::from_image(sprite_texture.default.clone());
+    let transform = Transform::from_xyz(0.0, 0.0, 1.0);
     commands.spawn((PlayerCore, transform, sprite, OwnedBy(trigger.target())));
 }
