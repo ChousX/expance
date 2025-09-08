@@ -21,17 +21,6 @@ pub const TILES_PRE_CHUNK: UVec2 = uvec2(10, 10);
 pub struct TerrainTileAtlas {
     #[asset(path = "tile_map.png")]
     pub texture: Handle<Image>,
-    #[asset(texture_atlas_layout(
-        tile_size_x = 50,
-        tile_size_y = 50,
-        columns = 2,
-        rows = 1,
-        padding_x = 0,
-        padding_y = 0,
-        offset_x = 0,
-        offset_y = 0
-    ))]
-    pub _layout: Handle<TextureAtlasLayout>,
 }
 
 fn add_terrain_to_chunk(
