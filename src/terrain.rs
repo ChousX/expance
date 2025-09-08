@@ -8,11 +8,17 @@ use bevy_ecs_tilemap::{
 };
 
 use crate::chunk::{Chunk, LoadLevel};
+use crate::{app::AppUpdate, game::PlayState};
 
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(add_tilemap_to_chunk);
+        app.add_observer(on_add_loadlevel_sender)
+            .add_systems(
+                Update,
+                on_change_loadlevel_sender.in_set(AppUpdate::PostAction),
+            )
+            .add_observer(add_tilemap_to_chunk);
     }
 }
 
@@ -24,15 +30,39 @@ pub struct TerrainTileAtlas {
     pub texture: Handle<Image>,
 }
 
-fn add_tilemap_to_chunk(
-    trigger: Trigger<OnInsert, LoadLevel>,
+#[derive(Event, Copy, Clone)]
+pub struct NewTilemapForChunk;
+
+fn on_change_loadlevel_sender(
     mut commands: Commands,
-    tile_map_atalas: Res<TerrainTileAtlas>,
-    chunk: Query<(&LoadLevel, Option<&Children>)>,
+    load_levels: Query<(Entity, &LoadLevel, Option<&Children>), Changed<LoadLevel>>,
     tilemaps: Query<Entity, With<TileStorage>>,
 ) {
     //Only Load Tilemaps on Full LoadLevel
-    let Ok((LoadLevel::Full, kids)) = chunk.get(trigger.target()) else {
+    for (id, load_level, kids) in load_levels.iter() {
+        if let LoadLevel::Full = load_level {
+            continue;
+        }
+        //if the tilemap already exist, stop now
+        if let Some(kids) = kids {
+            for kid in kids.iter() {
+                if tilemaps.contains(kid) {
+                    continue;
+                }
+            }
+        }
+        commands.entity(id).trigger(NewTilemapForChunk);
+    }
+}
+
+fn on_add_loadlevel_sender(
+    trigger: Trigger<OnAdd, LoadLevel>,
+    mut commands: Commands,
+    load_level: Query<(&LoadLevel, Option<&Children>)>,
+    tilemaps: Query<Entity, With<TileStorage>>,
+) {
+    //Only Load Tilemaps on Full LoadLevel
+    let Ok((LoadLevel::Full, kids)) = load_level.get(trigger.target()) else {
         return;
     };
     //if the tilemap already exist, stop now
@@ -43,7 +73,17 @@ fn add_tilemap_to_chunk(
             }
         }
     }
+    commands
+        .entity(trigger.target())
+        .trigger(NewTilemapForChunk);
+}
 
+fn add_tilemap_to_chunk(
+    trigger: Trigger<NewTilemapForChunk>,
+    mut commands: Commands,
+    tile_map_atalas: Res<TerrainTileAtlas>,
+    chunk: Query<(&LoadLevel, Option<&Children>)>,
+) {
     let tile_size = Chunk::SIZE / TILES_PRE_CHUNK.as_vec2();
     let tilemap_entity = trigger.target();
     let mut tile_storage = TileStorage::empty(TILES_PRE_CHUNK.into());
@@ -72,7 +112,7 @@ fn add_tilemap_to_chunk(
         texture: TilemapTexture::Single(tile_map_atalas.texture.clone()),
         tile_size: tile_size.into(),
         transform: Transform::from_xyz(0.0, 0.0, 0.0),
-        anchor: TilemapAnchor::Center,
+        anchor: TilemapAnchor::BottomLeft,
         render_settings: TilemapRenderSettings {
             render_chunk_size: TILES_PRE_CHUNK,
             ..Default::default()

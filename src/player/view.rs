@@ -60,7 +60,7 @@ fn move_player_view_to(
     let Ok(transform) = transforms.get(target) else {
         return;
     };
-    let from  = transform.translation().xy();
+    let from = transform.translation().xy();
     commands.entity(target).insert((MoveEntityTo {
         to,
         from,
