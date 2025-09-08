@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 use bevy_asset_loader::asset_collection::AssetCollection;
 use bevy_ecs_tilemap::{
-    TilemapBundle,
-    map::{TilemapId, TilemapRenderSettings, TilemapTexture, TilemapType},
-    tiles::{TileBundle, TilePos, TileStorage, TileTextureIndex},
+    anchor::TilemapAnchor, map::{TilemapId, TilemapRenderSettings, TilemapTexture, TilemapType}, tiles::{TileBundle, TilePos, TileStorage, TileTextureIndex}, TilemapBundle
 };
 
 use crate::chunk::Chunk;
@@ -57,6 +55,7 @@ fn add_terrain_to_chunk(
         texture: TilemapTexture::Single(tile_map_atalas.texture.clone()),
         tile_size: tile_size.into(),
         transform: Transform::from_xyz(0.0, 0.0, 0.0),
+        anchor: TilemapAnchor::Center,
         render_settings: TilemapRenderSettings {
             render_chunk_size: TILES_PRE_CHUNK,
             ..Default::default()
