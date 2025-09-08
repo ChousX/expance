@@ -1,15 +1,18 @@
 use bevy::prelude::*;
 use bevy_asset_loader::asset_collection::AssetCollection;
 use bevy_ecs_tilemap::{
-    anchor::TilemapAnchor, map::{TilemapId, TilemapRenderSettings, TilemapTexture, TilemapType}, tiles::{TileBundle, TilePos, TileStorage, TileTextureIndex}, TilemapBundle
+    TilemapBundle,
+    anchor::TilemapAnchor,
+    map::{TilemapId, TilemapRenderSettings, TilemapTexture, TilemapType},
+    tiles::{TileBundle, TilePos, TileStorage, TileTextureIndex},
 };
 
-use crate::chunk::Chunk;
+use crate::chunk::{Chunk, LoadLevel};
 
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(add_terrain_to_chunk);
+        app.add_observer(add_tilemap_to_chunk);
     }
 }
 
@@ -21,12 +24,26 @@ pub struct TerrainTileAtlas {
     pub texture: Handle<Image>,
 }
 
-fn add_terrain_to_chunk(
-    trigger: Trigger<OnAdd, Chunk>,
+fn add_tilemap_to_chunk(
+    trigger: Trigger<OnInsert, LoadLevel>,
     mut commands: Commands,
     tile_map_atalas: Res<TerrainTileAtlas>,
+    chunk: Query<(&LoadLevel, Option<&Children>)>,
+    tilemaps: Query<Entity, With<TileStorage>>,
 ) {
-    info!("Spawn Terrain");
+    //Only Load Tilemaps on Full LoadLevel
+    let Ok((LoadLevel::Full, kids)) = chunk.get(trigger.target()) else {
+        return;
+    };
+    //if the tilemap already exist, stop now
+    if let Some(kids) = kids {
+        for kid in kids.iter() {
+            if tilemaps.contains(kid) {
+                return;
+            }
+        }
+    }
+
     let tile_size = Chunk::SIZE / TILES_PRE_CHUNK.as_vec2();
     let tilemap_entity = trigger.target();
     let mut tile_storage = TileStorage::empty(TILES_PRE_CHUNK.into());
