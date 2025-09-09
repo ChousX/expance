@@ -4,7 +4,7 @@ use crate::app::AppState;
 
 mod command;
 pub mod core;
-mod view;
+pub mod view;
 pub mod wisp;
 
 pub struct PlayerPlugin;

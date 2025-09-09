@@ -11,6 +11,7 @@ impl Plugin for PlayerViewPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<MovePlayerView>()
             .add_observer(spawn_default_player_view)
+            .add_observer(move_active_player_view)
             .add_observer(move_player_view_to)
             .add_observer(move_player_view_by);
     }
@@ -48,6 +49,25 @@ pub enum MovePlayerView {
     By(Vec2),
 }
 
+#[derive(Event)]
+pub enum MoveActivePlayerView {
+    To(Vec2),
+    By(Vec2),
+}
+
+fn move_active_player_view(
+    trigger: Trigger<MoveActivePlayerView>,
+    mut commands: Commands,
+    camera: Query<&ChildOf, With<MainCamera>>,
+) {
+    if let Ok(parent) = camera.single() {
+        let move_type = match trigger.event() {
+            MoveActivePlayerView::To(amount) => MovePlayerView::To(*amount),
+            MoveActivePlayerView::By(amount) => MovePlayerView::By(*amount),
+        };
+        commands.entity(parent.parent()).trigger(move_type);
+    }
+}
 fn move_player_view_to(
     trigger: Trigger<MovePlayerView>,
     mut commands: Commands,
