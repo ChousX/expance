@@ -71,21 +71,28 @@ fn move_active_player_view(
 fn move_player_view_to(
     trigger: Trigger<MovePlayerView>,
     mut commands: Commands,
-    transforms: Query<&GlobalTransform, With<PlayerView>>,
+    mut transforms: Query<(&GlobalTransform, Option<&mut MoveEntityTo>), With<PlayerView>>,
 ) {
     let &MovePlayerView::To(to) = trigger.event() else {
         return;
     };
     let target = trigger.target();
-    let Ok(transform) = transforms.get(target) else {
+    let Ok((transform, move_entity_to)) = transforms.get_mut(target) else {
         return;
     };
-    let from = transform.translation().xy();
-    commands.entity(target).insert((MoveEntityTo {
-        to,
-        from,
-        easing: EaseFunction::SmootherStepIn,
-    },));
+    match move_entity_to {
+        Some(mut move_entity_to) => {
+            move_entity_to.to += to;
+        }
+        None => {
+            let from = transform.translation().xy();
+            commands.entity(target).insert(MoveEntityTo {
+                to,
+                from,
+                easing: EaseFunction::SmootherStepIn,
+            });
+        }
+    }
 }
 
 fn move_player_view_by(
