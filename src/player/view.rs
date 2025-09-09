@@ -31,7 +31,7 @@ fn spawn_default_player_view(
             PlayerView,
             camera_transform.compute_transform(),
             OwnedBy(trigger.target()),
-            Speed(5000.0),
+            Speed(10000.0),
         ))
         //Adding the camera too sead view
         .add_child(camera);

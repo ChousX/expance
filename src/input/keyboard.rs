@@ -35,10 +35,10 @@ impl KeyboardBindings {
 impl Default for KeyboardBindings {
     fn default() -> Self {
         Self {
-            move_up: [Some(KeyCode::KeyW), None],
-            move_down: [Some(KeyCode::KeyS), None],
-            move_left: [Some(KeyCode::KeyA), None],
-            move_right: [Some(KeyCode::KeyD), None],
+            move_up: [Some(KeyCode::KeyW), Some(KeyCode::KeyK)],
+            move_down: [Some(KeyCode::KeyS), Some(KeyCode::KeyJ)],
+            move_left: [Some(KeyCode::KeyA), Some(KeyCode::KeyH)],
+            move_right: [Some(KeyCode::KeyD), Some(KeyCode::KeyL)],
         }
     }
 }
@@ -61,5 +61,5 @@ fn move_current_view(
     if bindings.is_pressed_right(&keyboard) {
         amount.x += 1.0;
     }
-    commands.trigger(MoveActivePlayerView::By(amount));
+    commands.trigger(MoveActivePlayerView::By(amount * 5.0));
 }
