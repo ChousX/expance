@@ -40,15 +40,13 @@ fn on_change_loadlevel_sender(
 ) {
     //Only Load Tilemaps on Full LoadLevel
     for (id, load_level, kids) in load_levels.iter() {
-        if let LoadLevel::Full = load_level {
+        let LoadLevel::Full = load_level else {
             continue;
-        }
+        };
         //if the tilemap already exist, stop now
         if let Some(kids) = kids {
-            for kid in kids.iter() {
-                if tilemaps.contains(kid) {
-                    continue;
-                }
+            if kids.iter().any(|kid| tilemaps.contains(kid)) {
+                continue; // Skip this chunk
             }
         }
         commands.entity(id).trigger(NewTilemapForChunk);
@@ -82,7 +80,6 @@ fn add_tilemap_to_chunk(
     trigger: Trigger<NewTilemapForChunk>,
     mut commands: Commands,
     tile_map_atalas: Res<TerrainTileAtlas>,
-    chunk: Query<(&LoadLevel, Option<&Children>)>,
 ) {
     let tile_size = Chunk::SIZE / TILES_PRE_CHUNK.as_vec2();
     let tilemap_entity = trigger.target();
