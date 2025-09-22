@@ -78,6 +78,7 @@ impl ChunkPos {
     IntoStaticStr,
     Hash,
 )]
+#[component(immutable)]
 pub enum LoadLevel {
     Full = 2,
     Mostly = 1,
@@ -214,17 +215,18 @@ impl Iterator for PointsInRange {
 pub struct KeepChunkLoaded;
 
 fn load_chunks_around_chunk_loader(
-    chunk_loaders: Query<(&ChunkLoader, &Transform)>,
+    chunk_loaders: Query<(&ChunkLoader, &GlobalTransform)>,
     chunk_manager: Res<ChunkManager>,
     mut commands: Commands,
     existing_chunks: Query<&LoadLevel>,
 ) {
     let mut seen_chunks = HashSet::new();
     for (loader, transform) in chunk_loaders.iter() {
-        let base_z = transform.translation.z as i32;
+        let translation = transform.translation();
+        let base_z = translation.z as i32;
 
         for &load_level in LoadLevel::VARIANTS {
-            for point in loader.chunk_pos_in_range(transform.translation.xy(), load_level) {
+            for point in loader.chunk_pos_in_range(translation.xy(), load_level) {
                 let chunk_pos = point.extend(base_z);
 
                 // Only spawn once per position

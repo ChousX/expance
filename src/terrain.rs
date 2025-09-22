@@ -8,16 +8,11 @@ use bevy_ecs_tilemap::{
 };
 
 use crate::chunk::{Chunk, LoadLevel};
-use crate::{app::AppUpdate, game::PlayState};
 
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(on_add_loadlevel_sender)
-            .add_systems(
-                Update,
-                on_change_loadlevel_sender.in_set(AppUpdate::PostAction),
-            )
             .add_observer(add_tilemap_to_chunk);
     }
 }
@@ -33,28 +28,8 @@ pub struct TerrainTileAtlas {
 #[derive(Event, Copy, Clone)]
 pub struct NewTilemapForChunk;
 
-fn on_change_loadlevel_sender(
-    mut commands: Commands,
-    load_levels: Query<(Entity, &LoadLevel, Option<&Children>), Changed<LoadLevel>>,
-    tilemaps: Query<Entity, With<TileStorage>>,
-) {
-    //Only Load Tilemaps on Full LoadLevel
-    for (id, load_level, kids) in load_levels.iter() {
-        let LoadLevel::Full = load_level else {
-            continue;
-        };
-        //if the tilemap already exist, stop now
-        if let Some(kids) = kids {
-            if kids.iter().any(|kid| tilemaps.contains(kid)) {
-                continue; // Skip this chunk
-            }
-        }
-        commands.entity(id).trigger(NewTilemapForChunk);
-    }
-}
-
 fn on_add_loadlevel_sender(
-    trigger: Trigger<OnAdd, LoadLevel>,
+    trigger: Trigger<OnInsert, LoadLevel>,
     mut commands: Commands,
     load_level: Query<(&LoadLevel, Option<&Children>)>,
     tilemaps: Query<Entity, With<TileStorage>>,
@@ -65,10 +40,8 @@ fn on_add_loadlevel_sender(
     };
     //if the tilemap already exist, stop now
     if let Some(kids) = kids {
-        for kid in kids.iter() {
-            if tilemaps.contains(kid) {
-                return;
-            }
+        if kids.iter().any(|kid| tilemaps.contains(kid)) {
+            return; // Only returns if ANY tilemap exists
         }
     }
     commands
