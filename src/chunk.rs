@@ -175,40 +175,9 @@ fn remove_chunk_manager(
 #[derive(Component, Default)]
 #[require(Transform)]
 pub struct ChunkLoader {
-    pub full: Vec2,
-    pub mostly: Vec2,
-    pub minimum: Vec2,
-}
-
-impl ChunkLoader {
-    pub fn chunk_pos_in_range(&self, pos: Vec2, load_level: LoadLevel) -> PointsInRange {
-        let (target, min) = match load_level {
-            LoadLevel::Full => (self.full, vec2(0.0, 0.0)),
-            LoadLevel::Mostly => (self.mostly, self.full),
-            LoadLevel::Minimum => (self.minimum, self.mostly),
-        };
-        let min_pos = pos - target;
-        let max_pos = pos + target;
-
-        let min_chunk = (min_pos / Chunk::SIZE).floor().as_ivec2();
-        let max_chunk = (max_pos / Chunk::SIZE).ceil().as_ivec2();
-
-        let mut points = Vec::new();
-        for y in min_chunk.y..max_chunk.y {
-            for x in min_chunk.x..max_chunk.x {
-                points.push(ivec2(x, y));
-            }
-        }
-        PointsInRange(points)
-    }
-}
-
-pub struct PointsInRange(Vec<IVec2>);
-impl Iterator for PointsInRange {
-    type Item = IVec2;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.pop()
-    }
+    pub full: IVec2,
+    pub mostly: IVec2,
+    pub minimum: IVec2,
 }
 
 #[derive(Component, Default)]
@@ -218,42 +187,94 @@ fn load_chunks_around_chunk_loader(
     chunk_loaders: Query<(&ChunkLoader, &GlobalTransform)>,
     chunk_manager: Res<ChunkManager>,
     mut commands: Commands,
+) {
+    for (loader_rangers, transform) in chunk_loaders.iter() {
+        let ChunkLoader {
+            full,
+            mostly,
+            minimum,
+        } = loader_rangers;
+        let loader_pos = Chunk::g_transform_to_chunk_pos(transform);
+    }
+}
+
+fn shell_range(max: IVec2, min: IVec2, center_pos: IVec2) -> impl Iterator<Item = IVec2> {
+    let left = (center_pos.x + min.x).max(0);
+    let right = center_pos.x + max.x;
+    let bottom = (center_pos.y + min.y).max(0);
+    let top = center_pos.y + max.y;
+
+    (bottom..=top).flat_map(move |y| {
+        (left..=right).filter_map(move |x| {
+            let is_on_shell = x == left || x == right || y == bottom || y == top;
+
+            let inner_left = center_pos.x + min.x + 1;
+            let inner_right = center_pos.x + max.x - 1;
+            let inner_bottom = center_pos.y + min.y + 1;
+            let inner_top = center_pos.y + max.y - 1;
+
+            let is_outside_inner =
+                x < inner_left || x > inner_right || y < inner_bottom || y > inner_top;
+
+            if is_on_shell && is_outside_inner {
+                Some(IVec2::new(x, y))
+            } else {
+                None
+            }
+        })
+    })
+}
+/*
+fn _load_chunks_around_chunk_loader(
+    chunk_loaders: Query<(&ChunkLoader, &GlobalTransform)>,
+    chunk_manager: Res<ChunkManager>,
+    mut commands: Commands,
     existing_chunks: Query<&LoadLevel>,
 ) {
-    let mut seen_chunks = HashSet::new();
+    let mut chunk_load_levels = std::collections::HashMap::<IVec3, LoadLevel>::new();
+
+    // First pass: determine the highest load level needed for each chunk position
     for (loader, transform) in chunk_loaders.iter() {
         let translation = transform.translation();
         let base_z = translation.z as i32;
 
-        for &load_level in LoadLevel::VARIANTS {
+        // Process load levels in ascending order (Minimum -> Mostly -> Full)
+        // so that higher levels can override lower ones
+        let load_levels = [LoadLevel::Minimum, LoadLevel::Mostly, LoadLevel::Full];
+
+        for &load_level in &load_levels {
             for point in loader.chunk_pos_in_range(translation.xy(), load_level) {
                 let chunk_pos = point.extend(base_z);
 
-                // Only spawn once per position
-                if !seen_chunks.insert(chunk_pos) {
-                    continue;
-                }
-
-                if let Some(existing_entity) = chunk_manager.get(chunk_pos) {
-                    // Update the load level of the existing chunk
-                    if let Ok(current_level) = existing_chunks.get(existing_entity) {
-                        if *current_level < load_level {
-                            commands.entity(existing_entity).insert(load_level);
-                        }
-                    }
-                    continue;
-                }
-
-                let id = commands
-                    .spawn((Chunk, ChunkPos(chunk_pos), load_level))
-                    .id();
-
-                #[cfg(feature = "chunk_info")]
-                info!("new:{id:?}");
+                // Always update to the higher load level (since we process in ascending order)
+                chunk_load_levels.insert(chunk_pos, load_level);
             }
         }
     }
+
+    // Second pass: apply the determined load levels
+    for (chunk_pos, desired_load_level) in chunk_load_levels {
+        if let Some(existing_entity) = chunk_manager.get(chunk_pos) {
+            // Update the load level of the existing chunk only if it's higher
+            if let Ok(current_level) = existing_chunks.get(existing_entity) {
+                if *current_level < desired_load_level {
+                    commands.entity(existing_entity).insert(desired_load_level);
+                }
+            }
+        } else {
+            // Spawn new chunk with the determined load level
+            let id = commands
+                .spawn((Chunk, ChunkPos(chunk_pos), desired_load_level))
+                .id();
+
+            #[cfg(feature = "chunk_info")]
+            info!(
+                "new chunk spawned: {id:?} at {chunk_pos} with load level: {desired_load_level:?}"
+            );
+        }
+    }
 }
+*/
 
 fn add_chunk_transform(
     trigger: Trigger<OnAdd, ChunkPos>,
@@ -301,4 +322,12 @@ fn remove_chunk_loaders(mut commands: Commands, chunk_loaders: Query<Entity, Wit
     for chunk_loader in chunk_loaders.iter() {
         commands.entity(chunk_loader).remove::<ChunkLoader>();
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_shell_range() {}
 }

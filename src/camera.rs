@@ -26,8 +26,8 @@ fn add_chunk_loader_to_camera(mut camera: Query<Entity, With<MainCamera>>, mut c
         .single_mut()
         .expect("Getting only one MainCamera faild");
     commands.entity(camera).insert(ChunkLoader {
-        full: Chunk::SIZE * vec2(2.0, 1.0),
-        mostly: Chunk::SIZE * 3.0,
-        minimum: Chunk::SIZE * 5.0,
+        full: ivec2(2, 2),
+        mostly: ivec2(4, 4),
+        minimum: ivec2(6, 6),
     });
 }
