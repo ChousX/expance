@@ -12,8 +12,8 @@ use crate::chunk::{Chunk, LoadLevel};
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(on_add_loadlevel_sender)
-            .add_observer(add_tilemap_to_chunk);
+        //app.add_observer(on_add_loadlevel_sender);
+        //app.add_observer(add_tilemap_to_chunk);
     }
 }
 
@@ -28,6 +28,7 @@ pub struct TerrainTileAtlas {
 #[derive(Event, Copy, Clone)]
 pub struct NewTilemapForChunk;
 
+//becouse this feeds into the other fn but does not change anythign itself it could also be the cause
 fn on_add_loadlevel_sender(
     trigger: Trigger<OnInsert, LoadLevel>,
     mut commands: Commands,
@@ -49,6 +50,7 @@ fn on_add_loadlevel_sender(
         .trigger(NewTilemapForChunk);
 }
 
+//this seams to be where the bug is coming from not sure how yet
 fn add_tilemap_to_chunk(
     trigger: Trigger<NewTilemapForChunk>,
     mut commands: Commands,
