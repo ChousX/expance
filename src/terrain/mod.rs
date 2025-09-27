@@ -6,7 +6,9 @@ mod tilemap;
 
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
-    fn build(&self, app: &mut App) {}
+    fn build(&self, app: &mut App) {
+        app.add_plugins((tile_data::TerrainDataPlugin, tilemap::TerrainTilemapPlugin));
+    }
 }
 
 pub const TILES_PRE_CHUNK: UVec2 = uvec2(10, 10);
