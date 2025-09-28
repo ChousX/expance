@@ -33,7 +33,7 @@ dev = [
     "bevy/bevy_ui_debug",
     # Improve error messages coming from Bevy
     "bevy/track_location",
-    "chunk_info",
+    # "chunk_info",
 ]
 dev_native = [
     "dev",

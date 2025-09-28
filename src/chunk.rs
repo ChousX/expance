@@ -24,9 +24,17 @@ impl Plugin for ChunkPlugin {
             .add_observer(add_chunk_transform)
             .add_systems(OnExit(AppState::Game), remove_chunk_loaders);
         #[cfg(feature = "chunk_info")]
-        app.add_observer(show_chunk_spawn)
-            .add_systems(Update, draw_chunk_outlines);
+        app.add_observer(show_chunk_spawn);
+        app.init_state::<ShowChunkBounds>()
+            .add_systems(Update, draw_chunk_outlines.run_if(in_state(ShowChunkBounds::Yes)));
     }
+}
+
+#[derive(States, Default, Clone, Eq, PartialEq, Hash, Debug, Copy)]
+pub enum ShowChunkBounds {
+    #[default]
+    Yes,
+    No,
 }
 
 #[cfg(feature = "chunk_info")]
