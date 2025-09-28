@@ -1,0 +1,3 @@
+Bugs: 
+  Chunks don't seam to update after they are made
+  Tilemaps are not showing up 
