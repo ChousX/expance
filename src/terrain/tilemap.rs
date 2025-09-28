@@ -52,10 +52,10 @@ fn update_tilemap(chunks: Query<(&TileStorage), Changed<LoadLevel>>) {
 
 fn insert_tilemap_to_chunk(
     mut commands: Commands,
-    chunks: Query<(Entity, &TileData, &TerrainData), Without<TileStorage>>,
+    chunks: Query<(Entity, &TileData, &TerrainData, &Transform), Without<TileStorage>>,
     tile_map_atalas: Res<TerrainTileAtlas>,
 ) {
-    for (tilemap_entity, _tile_date, _terrain_data) in chunks.iter() {
+    for (tilemap_entity, _tile_date, _terrain_data, transform) in chunks.iter() {
         //Init Tilemap
         //Build Tilemap
         let tile_size = Chunk::SIZE / TILES_PRE_CHUNK.as_vec2();
@@ -85,7 +85,7 @@ fn insert_tilemap_to_chunk(
             storage: tile_storage,
             texture: TilemapTexture::Single(tile_map_atalas.texture.clone()),
             tile_size: tile_size.into(),
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
+            transform: *transform,
             anchor: TilemapAnchor::BottomLeft,
             render_settings: TilemapRenderSettings {
                 render_chunk_size: TILES_PRE_CHUNK,
