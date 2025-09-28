@@ -19,7 +19,7 @@ impl Plugin for ChunkPlugin {
             .add_observer(remove_chunk_manager)
             .add_systems(
                 Update,
-                load_chunks_around_chunk_loader.in_set(AppUpdate::PostAction),
+                load_chunks_around_chunk_loader.in_set(AppUpdate::Action),
             )
             .add_observer(add_chunk_transform)
             .add_systems(OnExit(AppState::Game), remove_chunk_loaders);

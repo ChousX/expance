@@ -25,6 +25,8 @@ fn main() -> AppExit {
         player::PlayerPlugin,
         camera::CameraPlugin,
         helper::HelperPlugin,
+        //when this is added the chunk bounds are not showing up other than one and the only that
+        //chunk diplays the tilemap
         terrain::TerrainPlugin,
         chunk::ChunkPlugin,
         game::GamePlugin,
