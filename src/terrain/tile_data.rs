@@ -20,6 +20,11 @@ pub enum TileType {
 
 #[derive(Component, Clone, Copy)]
 pub struct TileData(pub [TileType; TILE_COUNT]);
+impl Default for TileData {
+    fn default() -> Self {
+        Self([TileType::default(); TILE_COUNT])
+    }
+}
 
 #[derive(Clone, Copy, Default)]
 pub enum TerrainType {
@@ -29,6 +34,40 @@ pub enum TerrainType {
 
 #[derive(Component, Clone, Copy)]
 pub struct TerrainData(pub [TerrainType; TILE_COUNT]);
+impl Default for TerrainData {
+    fn default() -> Self {
+        Self([TerrainType::default(); TILE_COUNT])
+    }
+}
 
-fn add_terrain_data_to_chunk(trigger: Trigger<OnInsert, LoadLevel>) {}
-fn add_tile_data_to_chunk(trigger: Trigger<OnInsert, LoadLevel>) {}
+fn add_terrain_data_to_chunk(
+    trigger: Trigger<OnInsert, LoadLevel>,
+    chunks: Query<&LoadLevel>,
+    mut commands: Commands,
+) {
+    let Ok(load_level) = chunks.get(trigger.target()) else {
+        return;
+    };
+    if load_level < &LoadLevel::Mostly {
+        return;
+    }
+    commands
+        .entity(trigger.target())
+        .insert(TerrainData::default());
+}
+
+fn add_tile_data_to_chunk(
+    trigger: Trigger<OnInsert, LoadLevel>,
+    chunks: Query<&LoadLevel>,
+    mut commands: Commands,
+) {
+    let Ok(load_level) = chunks.get(trigger.target()) else {
+        return;
+    };
+    if load_level < &LoadLevel::Mostly {
+        return;
+    }
+    commands
+        .entity(trigger.target())
+        .insert(TileData::default());
+}
