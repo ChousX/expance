@@ -214,21 +214,24 @@ fn load_chunks_around_chunk_loader(
         chunk_manager: &Res<ChunkManager>,
         chunk_load_levels: &Query<&LoadLevel>,
         current_chunk_level: &Res<CurrentChunkLayer>,
-        load_level: LoadLevel,
+        desired_load_level: LoadLevel,
         iter: impl Iterator<Item = IVec2>,
     ) {
         for point in iter {
             let chunk_id = point.extend(***current_chunk_level);
             if let Some(id) = chunk_manager.get(chunk_id) {
                 //The chunk already exists so we need to check if its load level is correct
-                let load_level = chunk_load_levels.get(id).expect("Chunk not found???");
+                let current_load_level = chunk_load_levels.get(id).expect("Chunk not found???");
                 //if the chunk load level is too low, raise it
-                if *load_level < *load_level {
-                    commands.entity(id).insert(*load_level);
+                if *current_load_level < desired_load_level {
+                    commands
+                        .entity(id)
+                        .remove::<LoadLevel>()
+                        .insert(desired_load_level);
                 }
             } else {
                 //The chunk needs to be spawned
-                commands.spawn((Chunk, ChunkPos(chunk_id), load_level));
+                commands.spawn((Chunk, ChunkPos(chunk_id), desired_load_level));
             }
         }
     }
@@ -243,8 +246,8 @@ fn load_chunks_around_chunk_loader(
         // get all point iters
         let minimum_level = shell_range(minimum, mostly, loader_pos);
         let mostly_level = shell_range(mostly, full, loader_pos);
-        let full_level =
-            (-full.x..=full.x).flat_map(move |x| (-full.y..=full.y).map(move |y| ivec2(x, y)));
+        let full_level = (-full.x..=full.x)
+            .flat_map(move |x| (-full.y..=full.y).map(move |y| ivec2(x, y) + loader_pos));
 
         //update load levels or create chunks
         aux(

@@ -18,8 +18,19 @@ pub enum TileType {
     Ground,
 }
 
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Clone, Copy, Deref, DerefMut)]
 pub struct TileData(pub [TileType; TILE_COUNT]);
+
+impl TileData {
+    pub fn get_texture_index(&self, x: u32, y: u32) -> u32 {
+        let index = super::tile_index(x, y);
+        match self[index as usize] {
+            TileType::Wall => 1,
+            TileType::Ground => 2,
+        }
+    }
+}
+
 impl Default for TileData {
     fn default() -> Self {
         Self([TileType::default(); TILE_COUNT])

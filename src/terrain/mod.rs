@@ -1,3 +1,5 @@
+use std::ops::{Add, Mul};
+
 use bevy::prelude::*;
 use bevy_asset_loader::asset_collection::AssetCollection;
 
@@ -13,8 +15,13 @@ impl Plugin for TerrainPlugin {
 
 pub const TILES_PRE_CHUNK: UVec2 = uvec2(10, 10);
 pub const TILE_COUNT: usize = TILES_PRE_CHUNK.x as usize * TILES_PRE_CHUNK.y as usize;
-pub const fn tile_index(x: usize, y: usize) -> usize {
-    y * TILES_PRE_CHUNK.x as usize + x
+
+pub fn tile_index<T>(x: T, y: T) -> T
+where
+    T: From<u32> + Copy + Mul<Output = T> + Add<Output = T>,
+{
+    let tpc_x: T = T::from(TILES_PRE_CHUNK.x);
+    y * tpc_x + x
 }
 
 #[derive(AssetCollection, Resource)]
