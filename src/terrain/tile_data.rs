@@ -41,6 +41,18 @@ impl Default for TileData {
 pub enum TerrainType {
     #[default]
     Stone,
+    Dirt,
+    Sand,
+}
+
+impl TerrainType {
+    pub fn get_terrain_color(&self) -> Color {
+        match self {
+            TerrainType::Stone => Color::srgba(0.1, 0.1, 0.2, 0.5),
+            TerrainType::Dirt => Color::srgba(0.3, 0.1, 0.1, 0.5),
+            TerrainType::Sand => Color::srgba(0.3, 0.8, 0.2, 0.5),
+        }
+    }
 }
 
 #[derive(Component, Clone, Copy)]
