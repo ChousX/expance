@@ -2,8 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
 use super::{
-    TILES_PRE_CHUNK, TerrainTileAtlas,
-    TILE_SIZE,
+    TILE_SIZE, TILES_PRE_CHUNK, TerrainTileAtlas,
     tile_data::{TerrainData, TileData},
 };
 use crate::{

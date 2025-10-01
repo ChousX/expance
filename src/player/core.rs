@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use bevy_asset_loader::asset_collection::AssetCollection;
 
-use crate::player::{OwnedBy, Player};
+use crate::{
+    player::{OwnedBy, Player},
+    terrain::{BrakeTile, TILE_SIZE},
+};
 
 pub struct PlayerCorePlugin;
 impl Plugin for PlayerCorePlugin {
@@ -22,9 +25,21 @@ fn spawn_player_core(
     trigger: Trigger<OnAdd, Player>,
     mut commands: Commands,
     sprite_texture: Res<PlayerCoreSprite>,
+    mut out: EventWriter<BrakeTile>,
 ) {
     info!("spawn player core");
     let sprite = Sprite::from_image(sprite_texture.default.clone());
     let transform = Transform::from_xyz(0.0, 0.0, 1.0);
     commands.spawn((PlayerCore, transform, sprite, OwnedBy(trigger.target())));
+
+    //Brake all tiles around core
+    for x in -1..=1 {
+        for y in -1..=1 {
+            out.write(BrakeTile::ByPos(vec3(
+                x as f32 * TILE_SIZE.x,
+                y as f32 * TILE_SIZE.y,
+                0.0,
+            )));
+        }
+    }
 }

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
+use bevy_ecs_tilemap::prelude::*;
 
-use super::TILE_COUNT;
+use super::{TILE_COUNT, TILES_PRE_CHUNK};
 use crate::{
     app::AppUpdate,
     chunk::{Chunk, ChunkManager, LoadLevel},
@@ -12,8 +13,12 @@ impl Plugin for TerrainDataPlugin {
         app.add_observer(add_terrain_data_to_chunk);
         app.add_observer(add_tile_data_to_chunk);
 
-        app.add_event::<BrakeTile>()
-            .add_systems(Update, brake_tile.in_set(AppUpdate::PostAction));
+        app.add_event::<BrakeTile>().add_systems(
+            Update,
+            (brake_tile, sync_tile_texure_with_tile_data)
+                .chain()
+                .in_set(AppUpdate::PostAction),
+        );
     }
 }
 
@@ -23,6 +28,14 @@ pub enum TileType {
     Wall,
     Ground,
 }
+impl TileType {
+    pub fn get_texture_index(&self) -> u32 {
+        match self {
+            TileType::Wall => 1,
+            TileType::Ground => 2,
+        }
+    }
+}
 
 #[derive(Component, Clone, Copy, Deref, DerefMut)]
 pub struct TileData(pub [TileType; TILE_COUNT]);
@@ -30,10 +43,7 @@ pub struct TileData(pub [TileType; TILE_COUNT]);
 impl TileData {
     pub fn get_texture_index(&self, x: u32, y: u32) -> u32 {
         let index = super::tile_index(x, y);
-        match self[index as usize] {
-            TileType::Wall => 1,
-            TileType::Ground => 2,
-        }
+        self[index as usize].get_texture_index()
     }
 }
 
@@ -149,6 +159,28 @@ fn brake_tile(
                     warn!(
                         "could not access tile data at: {chunk}. local tile pos:{local_tile_pos}"
                     );
+                }
+            }
+        }
+    }
+}
+
+fn sync_tile_texure_with_tile_data(
+    tile_data: Query<(&TileData, &TileStorage), Changed<TileData>>,
+    mut tile_texure_index: Query<&mut TileTextureIndex>,
+) {
+    for (tile_data, tile_storage) in tile_data.iter() {
+        for (index, tile_type) in tile_data.0.iter().enumerate() {
+            let x = index as u32 % TILES_PRE_CHUNK.x;
+            let y = index as u32 / TILES_PRE_CHUNK.x;
+            let Some(tile_entity) = tile_storage.get(&TilePos { x, y }) else {
+                warn!("No tile at {} {}", x, y);
+                continue;
+            };
+            if let Ok(mut texture_index) = tile_texure_index.get_mut(tile_entity) {
+                let tile_type_texure_index = tile_type.get_texture_index();
+                if tile_type_texure_index != texture_index.0 {
+                    texture_index.0 = tile_type_texure_index;
                 }
             }
         }
