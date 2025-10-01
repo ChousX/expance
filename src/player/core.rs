@@ -34,6 +34,7 @@ fn spawn_player_core(
         PlayerCore,
         transform,
         sprite,
-        OwnedBy(trigger.target()), NeedsTileBreaking,
+        OwnedBy(trigger.target()),
+        NeedsTileBreaking,
     ));
 }
