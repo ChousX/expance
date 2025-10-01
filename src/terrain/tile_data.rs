@@ -1,13 +1,19 @@
 use bevy::prelude::*;
 
 use super::TILE_COUNT;
-use crate::chunk::LoadLevel;
+use crate::{
+    app::AppUpdate,
+    chunk::{Chunk, ChunkManager, LoadLevel},
+};
 
 pub struct TerrainDataPlugin;
 impl Plugin for TerrainDataPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(add_terrain_data_to_chunk);
         app.add_observer(add_tile_data_to_chunk);
+
+        app.add_event::<BrakeTile>()
+            .add_systems(Update, brake_tile.in_set(AppUpdate::PostAction));
     }
 }
 
@@ -55,11 +61,17 @@ impl TerrainType {
     }
 }
 
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Clone, Copy, Deref, DerefMut)]
 pub struct TerrainData(pub [TerrainType; TILE_COUNT]);
 impl Default for TerrainData {
     fn default() -> Self {
         Self([TerrainType::default(); TILE_COUNT])
+    }
+}
+impl TerrainData {
+    pub fn get_color(&self, x: u32, y: u32) -> Color {
+        let index = super::tile_index(x, y);
+        self[index as usize].get_terrain_color()
     }
 }
 
@@ -93,4 +105,52 @@ fn add_tile_data_to_chunk(
     commands
         .entity(trigger.target())
         .insert(TileData::default());
+}
+
+#[derive(Event, Clone, Copy)]
+//I may just want to make this an enum and have two ways to send the event. By entity or by position
+/// Transfom the NonGround into a Ground tile
+pub enum BrakeTile {
+    ByEntity(Entity),
+    ByPos(Vec3),
+}
+
+fn brake_tile(
+    mut events: EventReader<BrakeTile>,
+    tiles: Query<(&ChildOf, &Transform)>,
+    mut tile_data: Query<&mut TileData>,
+    chunk_manager: Res<ChunkManager>,
+) {
+    for event in events.read() {
+        match event {
+            BrakeTile::ByEntity(tile) => {
+                let Ok((child_of, transform)) = tiles.get(*tile) else {
+                    warn!("Tile does not exist: {tile}");
+                    continue;
+                };
+                let Ok(mut tile_data) = tile_data.get_mut(child_of.parent()) else {
+                    warn!("could not access tile data: {tile}");
+                    continue;
+                };
+                let local_tile_pos = super::get_local_tile_pos(transform.translation.xy());
+                let local_tile_id = super::tile_index(local_tile_pos.x, local_tile_pos.y) as usize;
+                tile_data[local_tile_id] = TileType::Ground;
+            }
+            BrakeTile::ByPos(pos) => {
+                let Some(chunk) = chunk_manager.get(Chunk::get_chunk_pos(*pos)) else {
+                    warn!("No chunk at pos: {pos}");
+                    continue;
+                };
+                let local_tile_pos = super::get_local_tile_pos(pos.xy());
+                let local_tile_id = super::tile_index(local_tile_pos.x, local_tile_pos.y) as usize;
+                if let Ok(mut tile_data) = tile_data.get_mut(chunk) {
+                    tile_data[local_tile_id] = TileType::Ground;
+                } else {
+                    warn!(
+                        "could not access tile data at: {chunk}. local tile pos:{local_tile_pos}"
+                    );
+                }
+            }
+        }
+    }
 }

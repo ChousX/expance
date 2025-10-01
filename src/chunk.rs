@@ -55,15 +55,18 @@ fn show_chunk_spawn(trigger: Trigger<OnAdd, Chunk>, q: Query<(&LoadLevel, &Chunk
 pub struct Chunk;
 impl Chunk {
     pub const SIZE: Vec2 = vec2(500.0, 500.0);
-    pub fn transform_to_chunk_pos(transform: &Transform) -> IVec2 {
-        let pos = transform.translation.xy();
-        let Vec2 { x, y } = pos / Self::SIZE;
-        ivec2(x as i32, y as i32)
+    pub fn transform_to_chunk_pos(transform: &Transform) -> IVec3 {
+        let pos = transform.translation;
+        Self::get_chunk_pos(pos)
     }
-    pub fn g_transform_to_chunk_pos(transform: &GlobalTransform) -> IVec2 {
-        let pos = transform.translation().xy();
-        let Vec2 { x, y } = pos / Self::SIZE;
-        ivec2(x as i32, y as i32)
+    pub fn g_transform_to_chunk_pos(transform: &GlobalTransform) -> IVec3 {
+        let pos = transform.translation();
+        Self::get_chunk_pos(pos)
+    }
+    pub fn get_chunk_pos(pos: Vec3) -> IVec3 {
+        let Vec2 { x, y } = pos.xy() / Self::SIZE;
+
+        ivec3(x as i32, y as i32, pos.z as i32)
     }
 }
 
@@ -241,7 +244,7 @@ fn load_chunks_around_chunk_loader(
             mostly,
             minimum,
         } = loader_rangers;
-        let loader_pos = Chunk::g_transform_to_chunk_pos(transform);
+        let loader_pos = Chunk::g_transform_to_chunk_pos(transform).xy();
 
         // get all point iters
         let minimum_level = shell_range(minimum, mostly, loader_pos);
