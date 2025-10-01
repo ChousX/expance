@@ -9,7 +9,8 @@ use crate::{
 pub struct PlayerCorePlugin;
 impl Plugin for PlayerCorePlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(spawn_player_core).add_observer(brake_tiles_around_core);
+        app.add_observer(spawn_player_core)
+            .add_observer(brake_tiles_around_core);
     }
 }
 
