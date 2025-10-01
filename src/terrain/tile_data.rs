@@ -13,14 +13,16 @@ impl Plugin for TerrainDataPlugin {
         app.add_observer(add_terrain_data_to_chunk);
         app.add_observer(add_tile_data_to_chunk);
 
-        app.add_event::<BrakeTile>()
-            .add_systems(
-                Update,
-                (brake_tile, sync_tile_texure_with_tile_data)
-                    .chain()
-                    .in_set(AppUpdate::PostAction),
+        app.add_event::<BrakeTile>().add_systems(
+            Update,
+            (
+                brake_tiles_around_pos,
+                brake_tile,
+                sync_tile_texure_with_tile_data,
             )
-            .add_systems(Update, brake_tiles_around_pos.in_set(AppUpdate::Action));
+                .chain()
+                .in_set(AppUpdate::PostAction),
+        );
     }
 }
 
