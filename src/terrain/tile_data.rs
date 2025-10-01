@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use super::{TILE_COUNT, TILES_PRE_CHUNK};
+use super::{TILE_COUNT, TILE_SIZE, TILES_PRE_CHUNK};
 use crate::{
     app::AppUpdate,
     chunk::{Chunk, ChunkManager, LoadLevel},
@@ -13,12 +13,14 @@ impl Plugin for TerrainDataPlugin {
         app.add_observer(add_terrain_data_to_chunk);
         app.add_observer(add_tile_data_to_chunk);
 
-        app.add_event::<BrakeTile>().add_systems(
-            Update,
-            (brake_tile, sync_tile_texure_with_tile_data)
-                .chain()
-                .in_set(AppUpdate::PostAction),
-        );
+        app.add_event::<BrakeTile>()
+            .add_systems(
+                Update,
+                (brake_tile, sync_tile_texure_with_tile_data)
+                    .chain()
+                    .in_set(AppUpdate::PostAction),
+            )
+            .add_systems(Update, brake_tiles_around_pos.in_set(AppUpdate::Action));
     }
 }
 
@@ -184,5 +186,35 @@ fn sync_tile_texure_with_tile_data(
                 }
             }
         }
+    }
+}
+
+/// Marker component that need their surrounding tiles broken
+#[derive(Component)]
+pub struct NeedsTileBreaking;
+
+fn brake_tiles_around_pos(
+    mut commands: Commands,
+    cores: Query<(Entity, &GlobalTransform), With<NeedsTileBreaking>>,
+    mut out: EventWriter<BrakeTile>,
+) {
+    for (entity, transform) in cores.iter() {
+        let translation = transform.translation();
+        let offset = translation.xy();
+        let z = translation.z;
+
+        //Brake all tiles around pos
+        for x in -1..=1 {
+            for y in -1..=1 {
+                out.write(BrakeTile::ByPos(vec3(
+                    x as f32 * TILE_SIZE.x + offset.x,
+                    y as f32 * TILE_SIZE.y + offset.y,
+                    z,
+                )));
+            }
+        }
+
+        // Remove the marker component so we don't process this core again
+        commands.entity(entity).remove::<NeedsTileBreaking>();
     }
 }
