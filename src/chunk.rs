@@ -1,11 +1,9 @@
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use bevy::{
     ecs::query::{QueryData, QueryFilter},
     prelude::*,
 };
-use strum::{IntoStaticStr, VariantArray};
 
 use crate::app::AppState;
 use crate::app::AppUpdate;
@@ -40,18 +38,18 @@ pub enum ShowChunkBounds {
 }
 
 #[cfg(feature = "chunk_info")]
-fn show_chunk_spawn(trigger: Trigger<OnAdd, Chunk>, q: Query<(&LoadLevel, &ChunkPos)>) {
+fn show_chunk_spawn(trigger: Trigger<OnAdd, Chunk>, q: Query<&ChunkPos>) {
     let id = trigger.target();
-    let Ok((load_level, pos)) = q.get(id) else {
+    let Ok(pos) = q.get(id) else {
         warn!("info was not there");
         return;
     };
-    let str_ll: &str = load_level.into();
-    info!("Chunk(id:{}, load_level:{},pos:{})", id, str_ll, pos.0);
+    info!("Chunk(id:{}, pos:{})", id, pos.0);
 }
 
 #[derive(Component)]
-#[require(ChunkPos, LoadLevel)]
+//Not sure if this should be required or auto added
+#[require(ChunkPos)]
 pub struct Chunk;
 impl Chunk {
     pub const SIZE: Vec2 = vec2(500.0, 500.0);
@@ -76,28 +74,6 @@ impl ChunkPos {
     pub fn into_vec3(&self) -> Vec3 {
         self.0.as_vec3() * Chunk::SIZE.extend(1.0)
     }
-}
-
-#[derive(
-    PartialOrd,
-    Ord,
-    VariantArray,
-    Debug,
-    PartialEq,
-    Eq,
-    Component,
-    Default,
-    Clone,
-    Copy,
-    IntoStaticStr,
-    Hash,
-)]
-#[component(immutable)]
-pub enum LoadLevel {
-    Full = 2,
-    Mostly = 1,
-    #[default]
-    Minimum = 0,
 }
 
 #[derive(Resource, Default, Deref, DerefMut)]
@@ -195,19 +171,15 @@ fn remove_chunk_manager(
 
 #[derive(Component, Default)]
 #[require(Transform)]
-pub struct ChunkLoader {
-    pub full: IVec2,
-    pub mostly: IVec2,
-    pub minimum: IVec2,
-}
+pub struct ChunkLoader(IVec2);
 
 #[derive(Component, Default)]
 pub struct KeepChunkLoaded;
 
+//TODO: After LoadLevel was removed this needs to be updated
 fn load_chunks_around_chunk_loader(
     chunk_loaders: Query<(&ChunkLoader, &GlobalTransform)>,
     chunk_manager: Res<ChunkManager>,
-    chunk_load_levels: Query<&LoadLevel>,
     current_chunk_level: Res<CurrentChunkLayer>,
     mut commands: Commands,
 ) {
@@ -215,9 +187,7 @@ fn load_chunks_around_chunk_loader(
     fn aux(
         commands: &mut Commands,
         chunk_manager: &Res<ChunkManager>,
-        chunk_load_levels: &Query<&LoadLevel>,
         current_chunk_level: &Res<CurrentChunkLayer>,
-        desired_load_level: LoadLevel,
         iter: impl Iterator<Item = IVec2>,
     ) {
         for point in iter {
@@ -315,11 +285,8 @@ fn add_chunk_transform(
         .insert(Transform::from_translation(chunk_pos.into_vec3()));
 }
 
-fn draw_chunk_outlines(
-    chunks: Query<(&ChunkPos, Option<&GlobalTransform>, &LoadLevel)>,
-    mut gizmos: Gizmos,
-) {
-    for (chunk_pos, global_transform, load_level) in &chunks {
+fn draw_chunk_outlines(chunks: Query<(&ChunkPos, Option<&GlobalTransform>)>, mut gizmos: Gizmos) {
+    for (chunk_pos, global_transform) in &chunks {
         let base_pos = chunk_pos.into_vec3();
         let world_pos = global_transform.map_or(base_pos, |g| g.translation());
 
@@ -330,11 +297,7 @@ fn draw_chunk_outlines(
         let top_right = bottom_right + Vec3::new(0.0, SIZE.y, 0.0);
         let top_left = bottom_left + Vec3::new(0.0, SIZE.y, 0.0);
 
-        let color = match load_level {
-            LoadLevel::Full => bevy::color::palettes::tailwind::GREEN_500,
-            LoadLevel::Mostly => bevy::color::palettes::tailwind::YELLOW_500,
-            LoadLevel::Minimum => bevy::color::palettes::tailwind::RED_500,
-        };
+        let color = bevy::color::palettes::tailwind::GREEN_500;
 
         gizmos.line(top_left, top_right, color);
         gizmos.line(top_right, bottom_right, color);

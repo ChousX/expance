@@ -13,16 +13,6 @@ impl Plugin for TerrainDataPlugin {
         app.add_observer(add_terrain_data_to_chunk);
         app.add_observer(add_tile_data_to_chunk);
 
-        app.add_event::<BrakeTile>().add_systems(
-            Update,
-            (
-                brake_tiles_around_pos,
-                brake_tile,
-                sync_tile_texure_with_tile_data,
-            )
-                .chain()
-                .in_set(AppUpdate::PostAction),
-        );
     }
 }
 
@@ -41,22 +31,6 @@ impl TileType {
     }
 }
 
-#[derive(Component, Clone, Copy, Deref, DerefMut)]
-pub struct TileData(pub [TileType; TILE_COUNT]);
-
-impl TileData {
-    pub fn get_texture_index(&self, x: u32, y: u32) -> u32 {
-        let index = super::tile_index(x, y);
-        self[index as usize].get_texture_index()
-    }
-}
-
-impl Default for TileData {
-    fn default() -> Self {
-        Self([TileType::default(); TILE_COUNT])
-    }
-}
-
 #[derive(Clone, Copy, Default)]
 pub enum TerrainType {
     #[default]
@@ -72,20 +46,6 @@ impl TerrainType {
             TerrainType::Dirt => Color::srgba(0.3, 0.1, 0.1, 0.5),
             TerrainType::Sand => Color::srgba(0.3, 0.8, 0.2, 0.5),
         }
-    }
-}
-
-#[derive(Component, Clone, Copy, Deref, DerefMut)]
-pub struct TerrainData(pub [TerrainType; TILE_COUNT]);
-impl Default for TerrainData {
-    fn default() -> Self {
-        Self([TerrainType::default(); TILE_COUNT])
-    }
-}
-impl TerrainData {
-    pub fn get_color(&self, x: u32, y: u32) -> Color {
-        let index = super::tile_index(x, y);
-        self[index as usize].get_terrain_color()
     }
 }
 
@@ -122,8 +82,6 @@ fn add_tile_data_to_chunk(
 }
 
 #[derive(Event, Clone, Copy)]
-//I may just want to make this an enum and have two ways to send the event. By entity or by position
-/// Transfom the NonGround into a Ground tile
 pub enum BrakeTile {
     ByEntity(Entity),
     ByPos(Vec3),

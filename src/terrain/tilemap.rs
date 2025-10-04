@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use super::{
-    TILE_SIZE, TILES_PRE_CHUNK, TerrainTileAtlas,
-    tile_data::{TerrainData, TileData},
-};
+use super::{TILE_SIZE, TILES_PRE_CHUNK, TerrainTileAtlas};
 use crate::{
     app::{AppState, AppUpdate},
     chunk::{Chunk, LoadLevel},
@@ -13,9 +10,8 @@ use crate::{
 pub struct TerrainTilemapPlugin;
 impl Plugin for TerrainTilemapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(add_tilemap_to_chunk)
-            .add_systems(Update, update_tilemap);
-        app.add_event::<InsertTileMap>().add_systems(
+        app.add_observer(add_tilemap_to_chunk);
+        app.add_systems(
             Update,
             insert_tilemap_to_chunk
                 .in_set(AppUpdate::PostAction)
@@ -24,13 +20,9 @@ impl Plugin for TerrainTilemapPlugin {
     }
 }
 
-#[derive(Event, Deref, DerefMut, Clone, Copy)]
-pub struct InsertTileMap(pub Entity);
-
 fn add_tilemap_to_chunk(
     trigger: Trigger<OnInsert, LoadLevel>,
     chunks: Query<(&LoadLevel, Option<&TileStorage>)>,
-    mut output: EventWriter<InsertTileMap>,
 ) {
     //Check if the load level is == to LoadLevel::Full
     let Ok((load_level, tile_storage)) = chunks.get(trigger.target()) else {
@@ -46,9 +38,6 @@ fn add_tilemap_to_chunk(
     //output.write(InsertTileMap(trigger.target()));
 }
 
-fn update_tilemap(chunks: Query<(&TileStorage), Changed<LoadLevel>>) {
-    //Update Tiles to reflect terrain data
-}
 
 fn insert_tilemap_to_chunk(
     mut commands: Commands,
