@@ -9,7 +9,6 @@ use bevy::{
     prelude::*,
 };
 
-use crate::app::AppState;
 use crate::app::AppUpdate;
 
 pub struct ChunkPlugin;
@@ -17,14 +16,11 @@ impl Plugin for ChunkPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ChunkManager>()
             .init_resource::<CurrentChunkLayer>();
-        app.add_observer(add_chunk_manager)
-            .add_observer(remove_chunk_manager)
-            .add_systems(
-                Update,
-                load_chunks_around_chunk_loader.in_set(AppUpdate::Action),
-            )
-            .add_observer(add_chunk_transform)
-            .add_systems(OnExit(AppState::Game), remove_chunk_loaders);
+
+        app.add_systems(
+            Update,
+            load_chunks_around_chunk_loader.in_set(AppUpdate::Action),
+        );
         #[cfg(feature = "chunk_info")]
         app.add_observer(show_chunk_spawn);
         app.init_state::<ShowChunkBounds>().add_systems(
@@ -110,10 +106,7 @@ impl ChunkPos {
 ///Updates Transform to match ChunkPos
 fn on_add_chunk_pos(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
     let translation = world.get::<ChunkPos>(entity).unwrap().into_vec3();
-    world
-        .get_mut::<Transform>(entity)
-        .unwrap()
-        .with_translation(translation);
+     world.get_mut::<Transform>(entity).unwrap().translation = translation;
 }
 
 #[derive(Resource, Default, Deref, DerefMut)]
