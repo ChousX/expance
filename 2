@@ -1,7 +1,4 @@
-use bevy::{
-    ecs::{component::HookContext, world::DeferredWorld},
-    prelude::*,
-};
+use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
 use super::{TILE_COUNT, TILE_SIZE, TILES_PRE_CHUNK};
@@ -11,8 +8,8 @@ pub struct TerrainDataPlugin;
 impl Plugin for TerrainDataPlugin {
     fn build(&self, app: &mut App) {}
 }
+
 #[derive(Clone, Copy, Default, Component)]
-#[require(TileTextureIndex)]
 #[component(
     immutable,
     on_replace= on_tile_type_replace,
@@ -36,13 +33,9 @@ impl TileType {
     }
 }
 
-fn on_tile_type_replace(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
-    let texture_index = world.get::<TileType>(entity).unwrap().get_texture_index();
-    world.get_mut::<TileTextureIndex>(entity).unwrap().0 = texture_index;
-}
+fn on_tile_type_replace(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {}
 
 #[derive(Clone, Copy, Default, Component)]
-#[require(TileColor)]
 #[component(
     immutable,
     on_replace= on_terrain_type_replace,
@@ -66,11 +59,6 @@ impl TerrainType {
     pub fn generate(x: u32, y: u32, chunk_pos: IVec3) -> Self {
         TerrainType::Sand
     }
-}
-
-fn on_terrain_type_replace(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
-    let terrain_color = world.get::<TerrainType>(entity).unwrap().get_color();
-    world.get_mut::<TileColor>(entity).unwrap().0 = terrain_color;
 }
 
 #[derive(Event, Clone, Copy)]

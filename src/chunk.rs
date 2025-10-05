@@ -127,16 +127,23 @@ impl ChunkManager {
         self.0.entry(z).or_default().insert(ivec2(x, y), id)
     }
 
+    ///Remove Chunk from ChunkManager
     pub fn remove(&mut self, pos: IVec3) -> Option<Entity> {
         let IVec3 { x, y, z } = pos;
         self.0.get_mut(&z)?.remove(&ivec2(x, y))
     }
 
-    pub fn is_loaded(&self, pos: IVec3) -> bool {
+    pub fn _is_loaded(&self, pos: IVec3) -> bool {
         let IVec3 { x, y, z } = pos;
         self.0
             .get(&z)
             .map_or(false, |level| level.contains_key(&ivec2(x, y)))
+    }
+
+    ///Get Chunk at global translation if it exists
+    pub fn get_chunk_at(&self, pos: &Vec3) -> Option<Entity> {
+        let pos = (pos / Chunk::SIZE.extend(1.0)).floor().as_ivec3();
+        self.get(pos)
     }
 }
 
