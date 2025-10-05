@@ -171,7 +171,7 @@ fn remove_chunk_manager(
 
 #[derive(Component, Default)]
 #[require(Transform)]
-pub struct ChunkLoader(IVec2);
+pub struct ChunkLoader(pub IVec2);
 
 #[derive(Component, Default)]
 pub struct KeepChunkLoaded;
