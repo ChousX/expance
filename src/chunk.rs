@@ -106,7 +106,7 @@ impl ChunkPos {
 ///Updates Transform to match ChunkPos
 fn on_add_chunk_pos(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
     let translation = world.get::<ChunkPos>(entity).unwrap().into_vec3();
-     world.get_mut::<Transform>(entity).unwrap().translation = translation;
+    world.get_mut::<Transform>(entity).unwrap().translation = translation;
 }
 
 #[derive(Resource, Default, Deref, DerefMut)]
