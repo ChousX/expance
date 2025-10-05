@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 
 use bevy::{
-    ecs::query::{QueryData, QueryFilter},
+    ecs::{
+        component::HookContext,
+        query::{QueryData, QueryFilter},
+        world::DeferredWorld,
+    },
     prelude::*,
 };
 
@@ -48,8 +52,12 @@ fn show_chunk_spawn(trigger: Trigger<OnAdd, Chunk>, q: Query<&ChunkPos>) {
 }
 
 #[derive(Component)]
-//Not sure if this should be required or auto added
 #[require(ChunkPos)]
+#[component(
+    immutable,
+    on_add= on_add_chunk,
+    on_remove = on_remove_chunk
+)]
 pub struct Chunk;
 impl Chunk {
     pub const SIZE: Vec2 = vec2(500.0, 500.0);
@@ -68,12 +76,44 @@ impl Chunk {
     }
 }
 
+///Adds Chunk to ChunkManager
+fn on_add_chunk(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
+    let chunk_pos = world.get::<ChunkPos>(entity).unwrap().0;
+    world
+        .get_resource_mut::<ChunkManager>()
+        .unwrap()
+        .insert(chunk_pos, entity);
+}
+
+///Removes Chunk from ChunkManager
+fn on_remove_chunk(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
+    let chunk_pos = world.get::<ChunkPos>(entity).unwrap().0;
+    world
+        .get_resource_mut::<ChunkManager>()
+        .unwrap()
+        .remove(chunk_pos);
+}
+
 #[derive(Component, Default, Deref, DerefMut)]
+#[require(Transform)]
+#[component(
+    immutable,
+    on_add= on_add_chunk_pos,
+)]
 pub struct ChunkPos(pub IVec3);
 impl ChunkPos {
     pub fn into_vec3(&self) -> Vec3 {
         self.0.as_vec3() * Chunk::SIZE.extend(1.0)
     }
+}
+
+///Updates Transform to match ChunkPos
+fn on_add_chunk_pos(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
+    let translation = world.get::<ChunkPos>(entity).unwrap().into_vec3();
+    world
+        .get_mut::<Transform>(entity)
+        .unwrap()
+        .with_translation(translation);
 }
 
 #[derive(Resource, Default, Deref, DerefMut)]
@@ -145,30 +185,6 @@ impl<'a, 'b, B: QueryData, C: QueryFilter> ChunkGrabberMut<'a, 'b, B, C> {
     }
 }
 
-fn add_chunk_manager(
-    trigger: Trigger<OnAdd, Chunk>,
-    mut chunk_manager: ResMut<ChunkManager>,
-    chunks: Query<&ChunkPos>,
-) {
-    let chunk_id = trigger.target();
-    let &ChunkPos(chunk_pos) = chunks.get(chunk_id).unwrap();
-    if let Some(pre_chunk) = chunk_manager.insert(chunk_pos, chunk_id) {
-        warn!("pushed out chunk:{pre_chunk}");
-    }
-}
-
-fn remove_chunk_manager(
-    trigger: Trigger<OnRemove, Chunk>,
-    mut chunk_manager: ResMut<ChunkManager>,
-    chunks: Query<&ChunkPos>,
-) {
-    let chunk_id = trigger.target();
-    let ChunkPos(chunk_pos) = chunks.get(chunk_id).unwrap();
-    if chunk_manager.remove(*chunk_pos).is_none() {
-        warn!("No Chunk to remove at:{chunk_pos}");
-    }
-}
-
 #[derive(Component, Default)]
 #[require(Transform)]
 pub struct ChunkLoader(pub IVec2);
@@ -176,15 +192,12 @@ pub struct ChunkLoader(pub IVec2);
 #[derive(Component, Default)]
 pub struct KeepChunkLoaded;
 
-//TODO: After LoadLevel was removed this needs to be updated
 fn load_chunks_around_chunk_loader(
     chunk_loaders: Query<(&ChunkLoader, &GlobalTransform)>,
     chunk_manager: Res<ChunkManager>,
     current_chunk_layer: Res<CurrentChunkLayer>,
     mut commands: Commands,
 ) {
-    // helper function
-
     for (loader_rangers, transform) in chunk_loaders.iter() {
         let &ChunkLoader(range) = loader_rangers;
         let loader_pos = Chunk::g_transform_to_chunk_pos(transform).xy();
@@ -224,20 +237,6 @@ fn _shell_range(outer: IVec2, inner: IVec2, center_pos: IVec2) -> impl Iterator<
         })
 }
 
-fn add_chunk_transform(
-    trigger: Trigger<OnAdd, ChunkPos>,
-    mut commands: Commands,
-    chunk_q: Query<&ChunkPos>,
-) {
-    let id = trigger.target();
-    let Ok(chunk_pos) = chunk_q.get(id) else {
-        return;
-    };
-    commands
-        .entity(id)
-        .insert(Transform::from_translation(chunk_pos.into_vec3()));
-}
-
 fn draw_chunk_outlines(chunks: Query<(&ChunkPos, Option<&GlobalTransform>)>, mut gizmos: Gizmos) {
     for (chunk_pos, global_transform) in &chunks {
         let base_pos = chunk_pos.into_vec3();
@@ -256,12 +255,6 @@ fn draw_chunk_outlines(chunks: Query<(&ChunkPos, Option<&GlobalTransform>)>, mut
         gizmos.line(top_right, bottom_right, color);
         gizmos.line(bottom_right, bottom_left, color);
         gizmos.line(bottom_left, top_left, color);
-    }
-}
-
-fn remove_chunk_loaders(mut commands: Commands, chunk_loaders: Query<Entity, With<ChunkLoader>>) {
-    for chunk_loader in chunk_loaders.iter() {
-        commands.entity(chunk_loader).remove::<ChunkLoader>();
     }
 }
 
