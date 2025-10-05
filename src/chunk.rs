@@ -180,78 +180,31 @@ pub struct KeepChunkLoaded;
 fn load_chunks_around_chunk_loader(
     chunk_loaders: Query<(&ChunkLoader, &GlobalTransform)>,
     chunk_manager: Res<ChunkManager>,
-    current_chunk_level: Res<CurrentChunkLayer>,
+    current_chunk_layer: Res<CurrentChunkLayer>,
     mut commands: Commands,
 ) {
     // helper function
-    fn aux(
-        commands: &mut Commands,
-        chunk_manager: &Res<ChunkManager>,
-        current_chunk_level: &Res<CurrentChunkLayer>,
-        iter: impl Iterator<Item = IVec2>,
-    ) {
-        for point in iter {
-            let chunk_id = point.extend(***current_chunk_level);
-            if let Some(id) = chunk_manager.get(chunk_id) {
-                //The chunk already exists so we need to check if its load level is correct
-                let current_load_level = chunk_load_levels.get(id).expect("Chunk not found???");
-                //if the chunk load level is too low, raise it
-                if *current_load_level < desired_load_level {
-                    commands
-                        .entity(id)
-                        .remove::<LoadLevel>()
-                        .insert(desired_load_level);
-                }
-            } else {
-                //The chunk needs to be spawned
-                commands.spawn((Chunk, ChunkPos(chunk_id), desired_load_level));
-            }
-        }
-    }
+
     for (loader_rangers, transform) in chunk_loaders.iter() {
-        let &ChunkLoader {
-            full,
-            mostly,
-            minimum,
-        } = loader_rangers;
+        let &ChunkLoader(range) = loader_rangers;
         let loader_pos = Chunk::g_transform_to_chunk_pos(transform).xy();
 
         // get all point iters
-        let minimum_level = shell_range(minimum, mostly, loader_pos);
-        let mostly_level = shell_range(mostly, full, loader_pos);
-        let full_level = (-full.x..=full.x)
-            .flat_map(move |x| (-full.y..=full.y).map(move |y| ivec2(x, y) + loader_pos));
-
-        //update load levels or create chunks
-        aux(
-            &mut commands,
-            &chunk_manager,
-            &chunk_load_levels,
-            &current_chunk_level,
-            LoadLevel::Full,
-            full_level,
-        );
-        aux(
-            &mut commands,
-            &chunk_manager,
-            &chunk_load_levels,
-            &current_chunk_level,
-            LoadLevel::Mostly,
-            mostly_level,
-        );
-        aux(
-            &mut commands,
-            &chunk_manager,
-            &chunk_load_levels,
-            &current_chunk_level,
-            LoadLevel::Minimum,
-            minimum_level,
-        );
+        let iter = (-range.x..=range.x)
+            .flat_map(move |x| (-range.y..=range.y).map(move |y| ivec2(x, y) + loader_pos));
+        //Check if chunk is
+        for point in iter {
+            let chunk_id = point.extend(**current_chunk_layer);
+            if let None = chunk_manager.get(chunk_id) {
+                //The chunk needs to be spawned
+                commands.spawn((Chunk, ChunkPos(chunk_id)));
+            }
+        }
     }
 }
 
 //returns an iter of all points in outer but not in inner
-fn shell_range(outer: IVec2, inner: IVec2, center_pos: IVec2) -> impl Iterator<Item = IVec2> {
+fn _shell_range(outer: IVec2, inner: IVec2, center_pos: IVec2) -> impl Iterator<Item = IVec2> {
     let outer_max = outer + center_pos;
     let outer_min = -outer + center_pos;
     let inner_max = inner + center_pos;
@@ -318,7 +271,7 @@ mod tests {
 
     #[test]
     fn test_basic_shell_range() {
-        let result: Vec<IVec2> = shell_range(ivec2(2, 2), ivec2(1, 1), ivec2(0, 0)).collect();
+        let result: Vec<IVec2> = _shell_range(ivec2(2, 2), ivec2(1, 1), ivec2(0, 0)).collect();
         let existing = [
             ivec2(-2, -2),
             ivec2(-2, -1),

@@ -38,7 +38,6 @@ fn add_tilemap_to_chunk(
     //output.write(InsertTileMap(trigger.target()));
 }
 
-
 fn insert_tilemap_to_chunk(
     mut commands: Commands,
     chunks: Query<(Entity, &TileData, &TerrainData, &Transform), Without<TileStorage>>,

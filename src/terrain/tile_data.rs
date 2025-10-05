@@ -12,7 +12,6 @@ impl Plugin for TerrainDataPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(add_terrain_data_to_chunk);
         app.add_observer(add_tile_data_to_chunk);
-
     }
 }
 
