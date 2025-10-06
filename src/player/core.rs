@@ -3,7 +3,7 @@ use bevy_asset_loader::asset_collection::AssetCollection;
 
 use crate::{
     player::{OwnedBy, Player},
-    terrain::{BrakeTile, brake_all_tiles_around},
+    terrain::{BrakeTile, TILE_SIZE, brake_all_tiles_around},
 };
 
 pub struct PlayerCorePlugin;
@@ -30,7 +30,7 @@ fn spawn_player_core(
 ) {
     info!("spawn player core");
     let sprite = Sprite::from_image(sprite_texture.default.clone());
-    let transform = Transform::from_xyz(0.0, 0.0, 1.0);
+    let transform = Transform::from_xyz(TILE_SIZE.x / 2.0, TILE_SIZE.y / 2.0, 1.1);
     commands.spawn((PlayerCore, transform, sprite, OwnedBy(trigger.target())));
-    brake_all_tiles_around(transform.translation, 3, &mut tile_brakes);
+    brake_all_tiles_around(transform.translation, 1, &mut tile_brakes);
 }

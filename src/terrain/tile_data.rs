@@ -21,7 +21,7 @@ impl Plugin for TerrainDataPlugin {
 #[require(TileTextureIndex)]
 #[component(
     immutable,
-    on_replace = on_tile_type_replace,
+    on_insert = on_tile_type_replace,
 )]
 pub enum TileType {
     #[default]
@@ -57,7 +57,7 @@ fn on_tile_type_replace(mut world: DeferredWorld, HookContext { entity, .. }: Ho
 #[require(TileColor)]
 #[component(
     immutable,
-    on_replace = on_terrain_type_replace,
+    on_insert = on_terrain_type_replace,
 )]
 pub enum TerrainType {
     #[default]
@@ -69,14 +69,14 @@ pub enum TerrainType {
 impl TerrainType {
     pub fn get_color(&self) -> Color {
         match self {
-            TerrainType::Stone => Color::srgba(0.1, 0.1, 0.2, 0.5),
-            TerrainType::Dirt => Color::srgba(0.3, 0.1, 0.1, 0.5),
-            TerrainType::Sand => Color::srgba(0.3, 0.8, 0.2, 0.5),
+            TerrainType::Stone => Color::srgba_u8(45, 65, 70, 255),
+            TerrainType::Dirt => Color::srgba_u8(142, 123, 59, 255),
+            TerrainType::Sand => Color::srgba_u8(240, 240, 0, 255),
         }
     }
 
     pub fn generate(x: u32, y: u32, chunk_pos: IVec3) -> Self {
-        TerrainType::Sand
+        TerrainType::Dirt
     }
 }
 
