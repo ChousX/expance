@@ -4,12 +4,18 @@ use bevy::{
 };
 use bevy_ecs_tilemap::prelude::*;
 
-use super::{TILE_COUNT, TILE_SIZE, TILES_PRE_CHUNK};
-use crate::chunk::{Chunk, ChunkManager};
+use super::TILE_SIZE;
+use crate::{
+    app::AppUpdate,
+    chunk::{Chunk, ChunkManager},
+};
 
 pub struct TerrainDataPlugin;
 impl Plugin for TerrainDataPlugin {
-    fn build(&self, app: &mut App) {}
+    fn build(&self, app: &mut App) {
+        app.add_event::<BrakeTile>()
+            .add_systems(Update, brake_tile.in_set(AppUpdate::PostAction));
+    }
 }
 #[derive(Clone, Copy, Default, Component)]
 #[require(TileTextureIndex)]
@@ -45,7 +51,7 @@ fn on_tile_type_replace(mut world: DeferredWorld, HookContext { entity, .. }: Ho
 #[require(TileColor)]
 #[component(
     immutable,
-    on_replace= on_terrain_type_replace,
+    on_replace = on_terrain_type_replace,
 )]
 pub enum TerrainType {
     #[default]
@@ -120,4 +126,16 @@ fn get_tile_chunk_index(pos: Vec2) -> UVec2 {
         local_pos.y = Chunk::SIZE.y + local_pos.y;
     }
     (local_pos / TILE_SIZE).as_uvec2()
+}
+
+///Brake all tiles around point by the range.
+pub fn brake_all_tiles_around(point: Vec3, range: u32, out: &mut EventWriter<BrakeTile>) {
+    let range = range as i32;
+    for x in -range..=range {
+        for y in -range..=range {
+            out.write(BrakeTile::ByPos(
+                point + Vec3::new(x as f32, y as f32, 0.0) * TILE_SIZE.extend(1.0),
+            ));
+        }
+    }
 }
