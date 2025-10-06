@@ -8,7 +8,7 @@ use crate::chunk::Chunk;
 mod tile_data;
 mod tilemap;
 
-pub use tile_data::{BrakeTile, NeedsTileBreaking};
+pub use tile_data::{BrakeTile, brake_all_tiles_around};
 
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {

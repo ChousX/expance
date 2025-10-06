@@ -1,37 +1,34 @@
-use bevy::prelude::*;
+use bevy::{
+    ecs::{component::HookContext, world::DeferredWorld},
+    prelude::*,
+};
 use bevy_ecs_tilemap::prelude::*;
 
-use super::{TILE_COUNT, TILE_SIZE, TILES_PRE_CHUNK};
+use super::TILE_SIZE;
 use crate::{
     app::AppUpdate,
-    chunk::{Chunk, ChunkManager, LoadLevel},
+    chunk::{Chunk, ChunkManager},
 };
 
 pub struct TerrainDataPlugin;
 impl Plugin for TerrainDataPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(add_terrain_data_to_chunk);
-        app.add_observer(add_tile_data_to_chunk);
-
-        app.add_event::<BrakeTile>().add_systems(
-            Update,
-            (
-                brake_tiles_around_pos,
-                brake_tile,
-                sync_tile_texure_with_tile_data,
-            )
-                .chain()
-                .in_set(AppUpdate::PostAction),
-        );
+        app.add_event::<BrakeTile>()
+            .add_systems(Update, brake_tile.in_set(AppUpdate::PostAction));
     }
 }
-
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Component)]
+#[require(TileTextureIndex)]
+#[component(
+    immutable,
+    on_replace= on_tile_type_replace,
+)]
 pub enum TileType {
     #[default]
     Wall,
     Ground,
 }
+
 impl TileType {
     pub fn get_texture_index(&self) -> u32 {
         match self {
@@ -39,25 +36,23 @@ impl TileType {
             TileType::Ground => 2,
         }
     }
-}
 
-#[derive(Component, Clone, Copy, Deref, DerefMut)]
-pub struct TileData(pub [TileType; TILE_COUNT]);
-
-impl TileData {
-    pub fn get_texture_index(&self, x: u32, y: u32) -> u32 {
-        let index = super::tile_index(x, y);
-        self[index as usize].get_texture_index()
+    pub fn generate(x: u32, y: u32, chunk_pos: IVec3) -> Self {
+        Self::Wall
     }
 }
 
-impl Default for TileData {
-    fn default() -> Self {
-        Self([TileType::default(); TILE_COUNT])
-    }
+fn on_tile_type_replace(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
+    let texture_index = world.get::<TileType>(entity).unwrap().get_texture_index();
+    world.get_mut::<TileTextureIndex>(entity).unwrap().0 = texture_index;
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Component)]
+#[require(TileColor)]
+#[component(
+    immutable,
+    on_replace = on_terrain_type_replace,
+)]
 pub enum TerrainType {
     #[default]
     Stone,
@@ -66,64 +61,25 @@ pub enum TerrainType {
 }
 
 impl TerrainType {
-    pub fn get_terrain_color(&self) -> Color {
+    pub fn get_color(&self) -> Color {
         match self {
             TerrainType::Stone => Color::srgba(0.1, 0.1, 0.2, 0.5),
             TerrainType::Dirt => Color::srgba(0.3, 0.1, 0.1, 0.5),
             TerrainType::Sand => Color::srgba(0.3, 0.8, 0.2, 0.5),
         }
     }
-}
 
-#[derive(Component, Clone, Copy, Deref, DerefMut)]
-pub struct TerrainData(pub [TerrainType; TILE_COUNT]);
-impl Default for TerrainData {
-    fn default() -> Self {
-        Self([TerrainType::default(); TILE_COUNT])
-    }
-}
-impl TerrainData {
-    pub fn get_color(&self, x: u32, y: u32) -> Color {
-        let index = super::tile_index(x, y);
-        self[index as usize].get_terrain_color()
+    pub fn generate(x: u32, y: u32, chunk_pos: IVec3) -> Self {
+        TerrainType::Sand
     }
 }
 
-fn add_terrain_data_to_chunk(
-    trigger: Trigger<OnInsert, LoadLevel>,
-    chunks: Query<&LoadLevel>,
-    mut commands: Commands,
-) {
-    let Ok(load_level) = chunks.get(trigger.target()) else {
-        return;
-    };
-    if load_level < &LoadLevel::Mostly {
-        return;
-    }
-    commands
-        .entity(trigger.target())
-        .insert(TerrainData::default());
-}
-
-fn add_tile_data_to_chunk(
-    trigger: Trigger<OnInsert, LoadLevel>,
-    chunks: Query<&LoadLevel>,
-    mut commands: Commands,
-) {
-    let Ok(load_level) = chunks.get(trigger.target()) else {
-        return;
-    };
-    if load_level < &LoadLevel::Mostly {
-        return;
-    }
-    commands
-        .entity(trigger.target())
-        .insert(TileData::default());
+fn on_terrain_type_replace(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
+    let terrain_color = world.get::<TerrainType>(entity).unwrap().get_color();
+    world.get_mut::<TileColor>(entity).unwrap().0 = terrain_color;
 }
 
 #[derive(Event, Clone, Copy)]
-//I may just want to make this an enum and have two ways to send the event. By entity or by position
-/// Transfom the NonGround into a Ground tile
 pub enum BrakeTile {
     ByEntity(Entity),
     ByPos(Vec3),
@@ -131,92 +87,55 @@ pub enum BrakeTile {
 
 fn brake_tile(
     mut events: EventReader<BrakeTile>,
-    tiles: Query<(&ChildOf, &Transform)>,
-    mut tile_data: Query<&mut TileData>,
+    chunks: Query<&TileStorage>,
     chunk_manager: Res<ChunkManager>,
+    mut commands: Commands,
 ) {
     for event in events.read() {
         match event {
             BrakeTile::ByEntity(tile) => {
-                let Ok((child_of, transform)) = tiles.get(*tile) else {
-                    warn!("Tile does not exist: {tile}");
-                    continue;
-                };
-                let Ok(mut tile_data) = tile_data.get_mut(child_of.parent()) else {
-                    warn!("could not access tile data: {tile}");
-                    continue;
-                };
-                let local_tile_pos = super::get_local_tile_pos(transform.translation.xy());
-                let local_tile_id = super::tile_index(local_tile_pos.x, local_tile_pos.y) as usize;
-                tile_data[local_tile_id] = TileType::Ground;
+                commands.entity(*tile).insert(TileType::Ground);
             }
             BrakeTile::ByPos(pos) => {
-                let Some(chunk) = chunk_manager.get(Chunk::get_chunk_pos(*pos)) else {
-                    warn!("No chunk at pos: {pos}");
+                let Some(chunk_id) = chunk_manager.get_chunk_at(pos) else {
+                    warn!("no chunk at pos:{pos}");
                     continue;
                 };
-                let local_tile_pos = super::get_local_tile_pos(pos.xy());
-                let local_tile_id = super::tile_index(local_tile_pos.x, local_tile_pos.y) as usize;
-                if let Ok(mut tile_data) = tile_data.get_mut(chunk) {
-                    tile_data[local_tile_id] = TileType::Ground;
-                } else {
-                    warn!(
-                        "could not access tile data at: {chunk}. local tile pos:{local_tile_pos}"
-                    );
-                }
+                let Ok(tile_storage) = chunks.get(chunk_id) else {
+                    warn!("chunk has no tilestorage:{chunk_id}");
+                    continue;
+                };
+                let tile_index = get_tile_chunk_index(pos.xy());
+                let Some(tile_id) = tile_storage.get(&TilePos::from(tile_index)) else {
+                    warn!("no tile at pos:{tile_index}");
+                    continue;
+                };
+                commands.entity(tile_id).insert(TileType::Ground);
             }
         }
     }
 }
 
-fn sync_tile_texure_with_tile_data(
-    tile_data: Query<(&TileData, &TileStorage), Changed<TileData>>,
-    mut tile_texure_index: Query<&mut TileTextureIndex>,
-) {
-    for (tile_data, tile_storage) in tile_data.iter() {
-        for (index, tile_type) in tile_data.0.iter().enumerate() {
-            let x = index as u32 % TILES_PRE_CHUNK.x;
-            let y = index as u32 / TILES_PRE_CHUNK.x;
-            let Some(tile_entity) = tile_storage.get(&TilePos { x, y }) else {
-                warn!("No tile at {} {}", x, y);
-                continue;
-            };
-            if let Ok(mut texture_index) = tile_texure_index.get_mut(tile_entity) {
-                let tile_type_texure_index = tile_type.get_texture_index();
-                if tile_type_texure_index != texture_index.0 {
-                    texture_index.0 = tile_type_texure_index;
-                }
-            }
-        }
+//Think this should work if there are picking errors check here first
+fn get_tile_chunk_index(pos: Vec2) -> UVec2 {
+    let mut local_pos = pos % Chunk::SIZE;
+    if local_pos.x.is_sign_negative() {
+        local_pos.x = Chunk::SIZE.x + local_pos.x;
     }
+    if local_pos.y.is_sign_negative() {
+        local_pos.y = Chunk::SIZE.y + local_pos.y;
+    }
+    (local_pos / TILE_SIZE).as_uvec2()
 }
 
-/// Marker component that need their surrounding tiles broken
-#[derive(Component)]
-pub struct NeedsTileBreaking;
-
-fn brake_tiles_around_pos(
-    mut commands: Commands,
-    cores: Query<(Entity, &GlobalTransform), With<NeedsTileBreaking>>,
-    mut out: EventWriter<BrakeTile>,
-) {
-    for (entity, transform) in cores.iter() {
-        let translation = transform.translation();
-        let offset = translation.xy();
-        let z = translation.z;
-
-        //Brake all tiles around pos
-        for x in -1..=1 {
-            for y in -1..=1 {
-                out.write(BrakeTile::ByPos(vec3(
-                    x as f32 * TILE_SIZE.x + offset.x,
-                    y as f32 * TILE_SIZE.y + offset.y,
-                    z,
-                )));
-            }
+///Brake all tiles around point by the range.
+pub fn brake_all_tiles_around(point: Vec3, range: u32, out: &mut EventWriter<BrakeTile>) {
+    let range = range as i32;
+    for x in -range..=range {
+        for y in -range..=range {
+            out.write(BrakeTile::ByPos(
+                point + Vec3::new(x as f32, y as f32, 0.0) * TILE_SIZE.extend(1.0),
+            ));
         }
-
-        // Remove the marker component so we don't process this core again
-        commands.entity(entity).remove::<NeedsTileBreaking>();
     }
 }
