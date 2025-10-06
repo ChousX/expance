@@ -21,8 +21,10 @@ impl Plugin for ChunkPlugin {
             Update,
             load_chunks_around_chunk_loader.in_set(AppUpdate::Action),
         );
+
         #[cfg(feature = "chunk_info")]
         app.add_observer(show_chunk_spawn);
+
         app.init_state::<ShowChunkBounds>().add_systems(
             Update,
             draw_chunk_outlines.run_if(in_state(ShowChunkBounds::Yes)),
@@ -32,8 +34,8 @@ impl Plugin for ChunkPlugin {
 
 #[derive(States, Default, Clone, Eq, PartialEq, Hash, Debug, Copy)]
 pub enum ShowChunkBounds {
-    #[default]
     Yes,
+    #[default]
     No,
 }
 
@@ -187,7 +189,7 @@ impl<'a, 'b, B: QueryData, C: QueryFilter> ChunkGrabberMut<'a, 'b, B, C> {
 
 #[derive(Component, Default)]
 #[require(Transform)]
-pub struct ChunkLoader(pub IVec2);
+pub struct ChunkLoader(pub IVec3);
 
 #[derive(Component, Default)]
 pub struct KeepChunkLoaded;
@@ -198,8 +200,8 @@ fn load_chunks_around_chunk_loader(
     current_chunk_layer: Res<CurrentChunkLayer>,
     mut commands: Commands,
 ) {
-    for (loader_rangers, transform) in chunk_loaders.iter() {
-        let &ChunkLoader(range) = loader_rangers;
+    for (loader_ranger, transform) in chunk_loaders.iter() {
+        let &ChunkLoader(range) = loader_ranger;
         let loader_pos = Chunk::g_transform_to_chunk_pos(transform).xy();
 
         // get all point iters
@@ -207,7 +209,7 @@ fn load_chunks_around_chunk_loader(
             .flat_map(move |x| (-range.y..=range.y).map(move |y| ivec2(x, y) + loader_pos));
         //Check if chunk is
         for point in iter {
-            let chunk_id = point.extend(**current_chunk_layer);
+            let chunk_id = point.extend(range.z);
             if let None = chunk_manager.get(chunk_id) {
                 //The chunk needs to be spawned
                 commands.spawn((Chunk, ChunkPos(chunk_id)));

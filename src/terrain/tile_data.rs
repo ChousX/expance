@@ -21,7 +21,7 @@ impl Plugin for TerrainDataPlugin {
 #[require(TileTextureIndex)]
 #[component(
     immutable,
-    on_replace= on_tile_type_replace,
+    on_replace = on_tile_type_replace,
 )]
 pub enum TileType {
     #[default]
@@ -44,7 +44,13 @@ impl TileType {
 
 fn on_tile_type_replace(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
     let texture_index = world.get::<TileType>(entity).unwrap().get_texture_index();
-    world.get_mut::<TileTextureIndex>(entity).unwrap().0 = texture_index;
+    if texture_index == 2 {
+        info!("texture index {texture_index}");
+    }
+    world
+        .commands()
+        .entity(entity)
+        .insert(TileTextureIndex(texture_index));
 }
 
 #[derive(Clone, Copy, Default, Component)]
@@ -97,6 +103,7 @@ fn brake_tile(
                 commands.entity(*tile).insert(TileType::Ground);
             }
             BrakeTile::ByPos(pos) => {
+                //info!("Tile brake at {pos}");
                 let Some(chunk_id) = chunk_manager.get_chunk_at(pos) else {
                     warn!("no chunk at pos:{pos}");
                     continue;
