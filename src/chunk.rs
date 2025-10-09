@@ -15,7 +15,7 @@ pub struct ChunkPlugin;
 impl Plugin for ChunkPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ChunkManager>()
-            .init_resource::<CurrentChunkLayer>();
+            .init_resource::<ChunkLayer>();
 
         app.add_systems(
             Update,
@@ -50,7 +50,7 @@ fn show_chunk_spawn(trigger: Trigger<OnAdd, Chunk>, q: Query<&ChunkPos>) {
 }
 
 #[derive(Component)]
-#[require(ChunkPos)]
+#[require(ChunkPos, Visibility)]
 #[component(
     immutable,
     on_add= on_add_chunk,
@@ -143,14 +143,14 @@ impl ChunkManager {
     }
 
     ///Get Chunk at global translation if it exists
-    pub fn get_chunk_at(&self, pos: &Vec3) -> Option<Entity> {
-        let pos = (pos / Chunk::SIZE.extend(1.0)).floor().as_ivec3();
+    pub fn get_chunk_at(&self, pos: &Vec2, level: i32) -> Option<Entity> {
+        let pos = (pos / Chunk::SIZE).floor().as_ivec2().extend(level);
         self.get(pos)
     }
 }
 
 #[derive(Resource, Default, Deref, DerefMut)]
-pub struct CurrentChunkLayer(i32);
+pub struct ChunkLayer(pub i32);
 
 pub struct ChunkGrabber<'a, B: QueryData, C: QueryFilter> {
     chunks: Query<'a, 'a, B, C>,
@@ -197,7 +197,7 @@ pub struct KeepChunkLoaded;
 fn load_chunks_around_chunk_loader(
     chunk_loaders: Query<(&ChunkLoader, &GlobalTransform)>,
     chunk_manager: Res<ChunkManager>,
-    current_chunk_layer: Res<CurrentChunkLayer>,
+    current_chunk_layer: Res<ChunkLayer>,
     mut commands: Commands,
 ) {
     for (loader_ranger, transform) in chunk_loaders.iter() {
@@ -260,6 +260,21 @@ fn draw_chunk_outlines(chunks: Query<(&ChunkPos, Option<&GlobalTransform>)>, mut
     }
 }
 
+pub fn update_terrain_view_level(
+    chunk_layer: Res<ChunkLayer>,
+    mut chunks: Query<(&ChunkPos, &mut Visibility)>,
+) {
+    if !chunk_layer.is_changed() {
+        return;
+    }
+    for (pos, mut visibility) in chunks.iter_mut() {
+        if pos.z != **chunk_layer {
+            *visibility = Visibility::Hidden;
+        } else {
+            *visibility = Visibility::Visible;
+        }
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -7,7 +7,7 @@ use bevy_ecs_tilemap::prelude::*;
 use super::TILE_SIZE;
 use crate::{
     app::AppUpdate,
-    chunk::{Chunk, ChunkManager},
+    chunk::{Chunk, ChunkManager, ChunkPos},
 };
 
 pub struct TerrainDataPlugin;
@@ -17,6 +17,7 @@ impl Plugin for TerrainDataPlugin {
             .add_systems(Update, brake_tile.in_set(AppUpdate::PostAction));
     }
 }
+
 #[derive(Clone, Copy, Default, Component)]
 #[require(TileTextureIndex)]
 #[component(
@@ -88,7 +89,7 @@ fn on_terrain_type_replace(mut world: DeferredWorld, HookContext { entity, .. }:
 #[derive(Event, Clone, Copy)]
 pub enum BrakeTile {
     ByEntity(Entity),
-    ByPos(Vec3),
+    ByPos { point: Vec2, layer: i32 },
 }
 
 fn brake_tile(
@@ -100,17 +101,16 @@ fn brake_tile(
     for event in events.read() {
         let tile_id = match event {
             BrakeTile::ByEntity(tile_id) => *tile_id,
-            BrakeTile::ByPos(pos) => {
-                //info!("Tile brake at {pos}");
-                let Some(chunk_id) = chunk_manager.get_chunk_at(pos) else {
-                    warn!("no chunk at pos:{pos}");
+            BrakeTile::ByPos { point, layer } => {
+                let Some(chunk_id) = chunk_manager.get_chunk_at(point, *layer) else {
+                    warn!("no chunk at point:{point}, layer:{layer}");
                     continue;
                 };
                 let Ok(tile_storage) = chunks.get(chunk_id) else {
                     warn!("chunk has no tilestorage:{chunk_id}");
                     continue;
                 };
-                let tile_index = get_tile_chunk_index(pos.xy());
+                let tile_index = get_tile_chunk_index(point);
                 let Some(tile_id) = tile_storage.get(&TilePos::from(tile_index)) else {
                     warn!("no tile at pos:{tile_index}");
                     continue;
@@ -123,7 +123,7 @@ fn brake_tile(
 }
 
 //Think this should work if there are picking errors check here first
-fn get_tile_chunk_index(pos: Vec2) -> UVec2 {
+fn get_tile_chunk_index(pos: &Vec2) -> UVec2 {
     let mut local_pos = pos % Chunk::SIZE;
     if local_pos.x.is_sign_negative() {
         local_pos.x = Chunk::SIZE.x + local_pos.x;
@@ -135,13 +135,19 @@ fn get_tile_chunk_index(pos: Vec2) -> UVec2 {
 }
 
 ///Brake all tiles around point by the range.
-pub fn brake_all_tiles_around(point: Vec3, range: u32, out: &mut EventWriter<BrakeTile>) {
+pub fn brake_all_tiles_around(
+    point: Vec2,
+    level: i32,
+    range: u32,
+    out: &mut EventWriter<BrakeTile>,
+) {
     let range = range as i32;
     for x in -range..=range {
         for y in -range..=range {
-            out.write(BrakeTile::ByPos(
-                point + Vec3::new(x as f32, y as f32, 0.0) * TILE_SIZE.extend(1.0),
-            ));
+            out.write(BrakeTile::ByPos {
+                point: point + (Vec2::new(x as f32, y as f32) * TILE_SIZE),
+                layer: level,
+            });
         }
     }
 }

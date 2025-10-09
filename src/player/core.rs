@@ -32,5 +32,5 @@ fn spawn_player_core(
     let sprite = Sprite::from_image(sprite_texture.default.clone());
     let transform = Transform::from_xyz(TILE_SIZE.x / 2.0, TILE_SIZE.y / 2.0, 1.1);
     commands.spawn((PlayerCore, transform, sprite, OwnedBy(trigger.target())));
-    brake_all_tiles_around(transform.translation, 1, &mut tile_brakes);
+    brake_all_tiles_around(transform.translation.xy(), 0, 1, &mut tile_brakes);
 }
