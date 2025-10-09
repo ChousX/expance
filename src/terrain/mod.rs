@@ -37,19 +37,3 @@ pub struct TerrainTileAtlas {
     #[asset(path = "tile_map.png")]
     pub texture: Handle<Image>,
 }
-
-pub fn get_local_tile_pos(pos: Vec2) -> UVec2 {
-    let local_pos = pos % Chunk::SIZE;
-    let tile_pos = local_pos / TILE_SIZE;
-    let x = if tile_pos.x.is_sign_negative() {
-        TILES_PRE_CHUNK.x - tile_pos.x.abs() as u32
-    } else {
-        tile_pos.x as u32
-    };
-    let y = if tile_pos.y.is_sign_negative() {
-        TILES_PRE_CHUNK.y - tile_pos.y.abs() as u32
-    } else {
-        tile_pos.y as u32
-    };
-    uvec2(x, y)
-}

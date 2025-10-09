@@ -98,10 +98,8 @@ fn brake_tile(
     mut commands: Commands,
 ) {
     for event in events.read() {
-        match event {
-            BrakeTile::ByEntity(tile) => {
-                commands.entity(*tile).insert(TileType::Ground);
-            }
+        let tile_id = match event {
+            BrakeTile::ByEntity(tile_id) => *tile_id,
             BrakeTile::ByPos(pos) => {
                 //info!("Tile brake at {pos}");
                 let Some(chunk_id) = chunk_manager.get_chunk_at(pos) else {
@@ -117,9 +115,10 @@ fn brake_tile(
                     warn!("no tile at pos:{tile_index}");
                     continue;
                 };
-                commands.entity(tile_id).insert(TileType::Ground);
+                tile_id
             }
-        }
+        };
+        commands.entity(tile_id).insert(TileType::Ground);
     }
 }
 
